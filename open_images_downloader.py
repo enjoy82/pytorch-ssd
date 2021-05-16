@@ -120,6 +120,7 @@ if __name__ == '__main__':
 
     class_description_file = os.path.join(args.root, "class-descriptions-boxable.csv")
     if not os.path.exists(class_description_file):
+        print("OK")
         url = "https://storage.googleapis.com/openimages/2018_04/class-descriptions-boxable.csv"
         logging.warning(f"Download {url}.")
         http_download(url, class_description_file)
