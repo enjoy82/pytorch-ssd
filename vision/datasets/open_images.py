@@ -56,7 +56,7 @@ class OpenImagesDataset:
         if self.transform:
             image, _ = self.transform(image)
         return image
-
+    #ここで参照してる
     def _read_data(self):
         annotation_file = f"{self.root}/sub-{self.dataset_type}-annotations-bbox.csv"
         annotations = pd.read_csv(annotation_file)
