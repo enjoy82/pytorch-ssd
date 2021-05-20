@@ -10,7 +10,7 @@ from vision.ssd.mobilenet_v2_ssd_lite import create_mobilenetv2_ssd_lite_predict
 from vision.ssd.mobilenetv3_ssd_lite import create_mobilenetv3_small_ssd_lite
 
 
-DEVICE = torch.device("cuda:0" if torch.cuda.is_available() and args.use_cuda else "cpu")
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def group_annotation_by_class(dataset):
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     eval_path = pathlib.Path(eval_dir)
     eval_path.mkdir(exist_ok=True)
     timer = Timer()
-    class_names = [name.strip() for name in open(args.label_file).readlines()]
+    class_names = [name.strip() for name in open(label_file).readlines()]
 
     dataset = OpenImagesDataset(dataset_path, dataset_type="test")
 
