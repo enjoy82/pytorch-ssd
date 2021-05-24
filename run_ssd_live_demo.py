@@ -1,17 +1,14 @@
-from vision.ssd.mobilenetv1_ssd import create_mobilenetv1_ssd, create_mobilenetv1_ssd_predictor
-from vision.ssd.mobilenetv1_ssd_lite import create_mobilenetv1_ssd_lite, create_mobilenetv1_ssd_lite_predictor
-from vision.ssd.mobilenet_v2_ssd_lite import create_mobilenetv2_ssd_lite, create_mobilenetv2_ssd_lite_predictor
-from vision.ssd.mobilenetv3_ssd_lite import create_mobilenetv3_large_ssd_lite, create_mobilenetv3_small_ssd_lite
+from vision.ssd.mobilenet_v2_ssd_lite import create_mobilenetv2_ssd_lite_predictor
+from vision.ssd.mobilenetv3_ssd_lite import create_mobilenetv3_small_ssd_lite
 from vision.utils.misc import Timer
 import cv2
 import sys
+import torch
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
+model_path = "./models/mbv3-Epoch-99-Loss-2.9210379077838016.pth" #モデル名
+label_path = "./models/open-images-model-labels.txt"
 
-if len(sys.argv) < 4:
-    print('Usage: python run_ssd_example.py <net type>  <model path> <label path> [video file]')
-    sys.exit(0)
-net_type = sys.argv[1]
-model_path = sys.argv[2]
-label_path = sys.argv[3]
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 if len(sys.argv) >= 5:
     cap = cv2.VideoCapture(sys.argv[4])  # capture from file
@@ -24,31 +21,10 @@ class_names = [name.strip() for name in open(label_path).readlines()]
 num_classes = len(class_names)
 
 
-if net_type == 'mb1-ssd':
-    net = create_mobilenetv1_ssd(len(class_names), is_test=True)
-elif net_type == 'mb1-ssd-lite':
-    net = create_mobilenetv1_ssd_lite(len(class_names), is_test=True)
-elif net_type == 'mb2-ssd-lite':
-    net = create_mobilenetv2_ssd_lite(len(class_names), is_test=True)
-elif net_type == 'mb3-large-ssd-lite':
-    net = create_mobilenetv3_large_ssd_lite(len(class_names), is_test=True)
-elif net_type == 'mb3-small-ssd-lite':
-    net = create_mobilenetv3_small_ssd_lite(len(class_names), is_test=True)
-else:
-    print("The net type is wrong. It should be one of mb1-ssd and mb1-ssd-lite.")
-    sys.exit(1)
+net = create_mobilenetv3_small_ssd_lite(len(class_names), is_test=True)
 net.load(model_path)
-
-if net_type == 'mb1-ssd':
-    predictor = create_mobilenetv1_ssd_predictor(net, candidate_size=200)
-elif net_type == 'mb1-ssd-lite':
-    predictor = create_mobilenetv1_ssd_lite_predictor(net, candidate_size=200)
-elif net_type == 'mb2-ssd-lite' or net_type == "mb3-large-ssd-lite" or net_type == "mb3-small-ssd-lite":
-    predictor = create_mobilenetv2_ssd_lite_predictor(net, candidate_size=200)
-else:
-    print("The net type is wrong. It should be one of mb1-ssd and mb1-ssd-lite.")
-    sys.exit(1)
-
+net = net.to(DEVICE)
+predictor = create_mobilenetv2_ssd_lite_predictor(net, candidate_size=200,  device=DEVICE)
 
 timer = Timer()
 while True:
@@ -62,15 +38,17 @@ while True:
     print('Time: {:.2f}s, Detect Objects: {:d}.'.format(interval, labels.size(0)))
     for i in range(boxes.size(0)):
         box = boxes[i, :]
+        box = box.numpy()
+        print("trans", box, box[0], box[1], box[2], box[3])
         label = f"{class_names[labels[i]]}: {probs[i]:.2f}"
-        cv2.rectangle(orig_image, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 4)
-
+        cv2.rectangle(orig_image, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (255, 255, 0), 4)
         cv2.putText(orig_image, label,
-                    (box[0]+20, box[1]+40),
+                    (int(box[0])+20, int(box[1])+40),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     1,  # font scale
                     (255, 0, 255),
-                    2)  # line type
+                    5,
+                    cv2.LINE_AA)  # line type
     cv2.imshow('annotated', orig_image)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
