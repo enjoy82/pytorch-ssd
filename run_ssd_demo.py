@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import time
  
 # モジュール読み込み 
 import sys
@@ -12,10 +13,25 @@ plugin = IEPlugin(device="MYRIAD")
 # モデルの読み込み 
 net = IENetwork(model='./models/mbv3-ssd-v1.xml', weights='./models/mbv3-ssd-v1.bin')
 exec_net = plugin.load(network=net)
- 
+input_blob_name = list(net.inputs.keys())[0]
+output_blob_name = list(net.outputs.keys())[0]
+#print("stand", input_blob_name, output_blob_name)
 # カメラ準備 
 cap = cv2.VideoCapture(0)
- 
+
+if cap.isOpened() != True:
+    print("camera open error!")
+    quit()
+else:
+    print("camera open!")
+    
+    
+windowwidth = 320
+windowheight = 240
+
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, windowwidth)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, windowheight)
+
 # メインループ 
 while True:
     ret, frame = cap.read()
@@ -28,19 +44,19 @@ while True:
     img = cv2.resize(frame, (300, 300))   # サイズ変更 
     img = img.transpose((2, 0, 1))    # HWC > CHW 
     img = np.expand_dims(img, axis=0) # 次元合せ 
- 
+    
     # 推論実行 
-    out = exec_net.infer(inputs={'data': img})
+    out = exec_net.infer(inputs={input_blob_name: img})
  
     # 出力から必要なデータのみ取り出し 
-    out = out['detection_out']
+    out = out[output_blob_name]
     out = np.squeeze(out) #サイズ1の次元を全て削除 
  
     # 検出されたすべての顔領域に対して１つずつ処理 
     for detection in out:
         # conf値の取得 
         confidence = float(detection[2])
- 
+        print(detection)
         # バウンディングボックス座標を入力画像のスケールに変換 
         xmin = int(detection[3] * frame.shape[1])
         ymin = int(detection[4] * frame.shape[0])
@@ -50,15 +66,15 @@ while True:
         # conf値が0.5より大きい場合のみバウンディングボックス表示 
         if confidence > 0.5:
             cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), color=(240, 180, 0), thickness=3)
- 
+    
     # 画像表示 
     cv2.imshow('frame', frame)
- 
+    
     # 何らかのキーが押されたら終了 
     key = cv2.waitKey(1)
     if key != -1:
         break
- 
+    
 # 終了処理 
 cap.release()
 cv2.destroyAllWindows()
