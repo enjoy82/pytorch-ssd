@@ -96,7 +96,7 @@ def compute_average_precision_per_class(num_true_cases, gt_boxes, difficult_case
     else:
         return measurements.compute_average_precision(precision, recall)
 
-
+#設定
 dataset_path = "./images"
 trained_model = "./models/mbv3-v2-Epoch-65-Loss-4.263951171823099.pth" #モデルパス
 nms_method = "hard"

@@ -1,12 +1,21 @@
 import cv2
 import numpy as np
 import time
+from utils_for_openvino.mb3lite_predictor import create_mobilenetv3_small_ssd_lite_predictor
  
 # モジュール読み込み 
 import sys
 sys.path.append('/opt/intel/openvino/python/python3.5/armv7l')
 from openvino.inference_engine import IENetwork, IEPlugin
- 
+
+windowwidth = 320
+windowheight = 240
+image_sige = 300
+nms_method = "hard"
+label_path = "./models/open-images-model-labels.txt"
+class_names = [name.strip() for name in open(label_path).readlines()]
+
+
 # ターゲットデバイスの指定 
 plugin = IEPlugin(device="MYRIAD")
  
@@ -15,6 +24,10 @@ net = IENetwork(model='./models/mbv3-ssd-v1.xml', weights='./models/mbv3-ssd-v1.
 exec_net = plugin.load(network=net)
 input_blob_name = list(net.inputs.keys())[0]
 output_blob_name = list(net.outputs.keys())[0]
+
+#predictor
+predictor = create_mobilenetv3_small_ssd_lite_predictor(exec_net, image_sige = image_sige,  nms_method=nms_method, input = input_blob_name, output = output_blob_name)
+
 #print("stand", input_blob_name, output_blob_name)
 # カメラ準備 
 cap = cv2.VideoCapture(0)
@@ -24,10 +37,7 @@ if cap.isOpened() != True:
     quit()
 else:
     print("camera open!")
-    
-    
-windowwidth = 320
-windowheight = 240
+
 
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, windowwidth)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, windowheight)
@@ -41,31 +51,27 @@ while True:
         continue
  
     # 入力データフォーマットへ変換 
-    img = cv2.resize(frame, (300, 300))   # サイズ変更 
+    img = cv2.resize(frame, (image_sige, image_sige))   # サイズ変更 
     img = img.transpose((2, 0, 1))    # HWC > CHW 
     img = np.expand_dims(img, axis=0) # 次元合せ 
     
     # 推論実行 
-    out = exec_net.infer(inputs={input_blob_name: img})
- 
+    #out = exec_net.infer(inputs={input_blob_name: img})
+    boxes, labels, probs = predictor.predict(img)
     # 出力から必要なデータのみ取り出し 
-    out = out[output_blob_name]
-    out = np.squeeze(out) #サイズ1の次元を全て削除 
- 
-    # 検出されたすべての顔領域に対して１つずつ処理 
-    for detection in out:
-        # conf値の取得 
-        confidence = float(detection[2])
-        print(detection)
-        # バウンディングボックス座標を入力画像のスケールに変換 
-        xmin = int(detection[3] * frame.shape[1])
-        ymin = int(detection[4] * frame.shape[0])
-        xmax = int(detection[5] * frame.shape[1])
-        ymax = int(detection[6] * frame.shape[0])
- 
-        # conf値が0.5より大きい場合のみバウンディングボックス表示 
-        if confidence > 0.5:
-            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), color=(240, 180, 0), thickness=3)
+    #out = out[output_blob_name]
+    
+    for i in range(boxes.size(0)):
+        box = boxes[i, :]
+        cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 4)
+        #label = f"""{voc_dataset.class_names[labels[i]]}: {probs[i]:.2f}"""
+        label = f"{class_names[labels[i]]}: {probs[i]:.2f}"
+        cv2.putText(frame, label,
+                    (box[0] + 20, box[1] + 40),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,  # font scale
+                    (255, 0, 255),
+                    2)  # line type
     
     # 画像表示 
     cv2.imshow('frame', frame)
