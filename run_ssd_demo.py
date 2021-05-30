@@ -56,7 +56,8 @@ while True:
     img = np.expand_dims(img, axis=0) # 次元合せ 
     
     # 推論実行 
-    #out = exec_net.infer(inputs={input_blob_name: img})
+    out = exec_net.infer(inputs={input_blob_name: img})
+    print(out.shape)
     boxes, labels, probs = predictor.predict(img)
     # 出力から必要なデータのみ取り出し 
     #out = out[output_blob_name]
