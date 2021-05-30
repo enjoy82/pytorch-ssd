@@ -35,6 +35,8 @@ class Predictor:
         with torch.no_grad():
             self.timer.start()
             scores, boxes = self.net.forward(images)
+            print(boxes, scores)
+            print(boxes.shape, scores.shape)
             print("Inference time: ", self.timer.end())
         boxes = boxes[0]
         scores = scores[0]
