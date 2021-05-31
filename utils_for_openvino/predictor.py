@@ -19,10 +19,10 @@ class Predictor:
         self.output = output
 
     def predict(self, image, top_k=-1, prob_threshold=None):
-        height, width, _ = image.shape
         image = self.transform(image)
         image = image.unsqueeze(0)
-
+        height, width, k = image.shape
+        print(height, width, k)
         res = self.openvinonet.infer(inputs={self.input: image})
         boxes = res[self.output[0]][0]
         scores = res[self.output[1]][0]
