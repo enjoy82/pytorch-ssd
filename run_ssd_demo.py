@@ -48,7 +48,7 @@ while True:
     # Reload on error 
     #if ret == False:
     #    continue
-    frame =  cv2.imread("./gun.jpg")
+    frame = cv2.imread("./gun.jpg")
     # 入力データフォーマットへ変換 
     img = cv2.resize(frame, (image_sige, image_sige))   # サイズ変更 
     img = img.transpose((2, 0, 1))    # HWC > CHW 
