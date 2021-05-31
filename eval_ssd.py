@@ -124,7 +124,7 @@ if __name__ == '__main__':
     predictor = create_mobilenetv2_ssd_lite_predictor(net, nms_method=nms_method, device=DEVICE)
 
     results = []
-    for i in range(len(dataset)):
+    for i in range(len(dataset))[:1]:
         print("process image", i)
         timer.start("Load Image")
         image = dataset.get_image(i)
@@ -140,6 +140,7 @@ if __name__ == '__main__':
             boxes + 1.0  # matlab's indexes start from 1
         ], dim=1))
     results = torch.cat(results)
+    """
     for class_index, class_name in enumerate(class_names):
         if class_index == 0: continue  # ignore background
         prediction_path = eval_path / f"det_test_{class_name}.txt"
@@ -170,3 +171,4 @@ if __name__ == '__main__':
         print(f"{class_name}: {ap}")
 
     print(f"\nAverage Precision Across All Classes:{sum(aps)/len(aps)}")
+    """

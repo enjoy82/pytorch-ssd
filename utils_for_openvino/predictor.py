@@ -1,5 +1,4 @@
-import torch
-
+import numpy as np
 from .box_utils import nms
 from .data_preprocessing import PredictionTransform
 from .misc import Timer
@@ -24,23 +23,16 @@ class Predictor:
         image = self.transform(image)
         images = image.unsqueeze(0)
 
-        out = self.openvinonet.infer(inputs={self.input: image})
+        res = self.openvinonet.infer(inputs={self.input: image})
+        boxes = res[self.output[0]][0]
+        scores = res[self.output[1]][0]
         #TODO check this algorithm
-        with torch.no_grad():
-            self.timer.start()
-            #
-            scores, boxes = self.net.forward(images)
-            print(boxes, scores)
-            print(boxes.shape, scores.shape)
-            print("Inference time: ", self.timer.end())
-        boxes = boxes[0]
-        scores = scores[0]
+
         if not prob_threshold:
             prob_threshold = self.filter_threshold
         # this version of nms is slower on GPU, so we move data to CPU.
         #TODO
-        boxes = boxes.to(cpu_device)
-        scores = scores.to(cpu_device)
+        print(boxes.shape, scores.shape)
         picked_box_probs = []
         picked_labels = []
         for class_index in range(1, scores.size(1)):
@@ -50,7 +42,7 @@ class Predictor:
             if probs.size(0) == 0:
                 continue
             subset_boxes = boxes[mask, :]
-            box_probs = torch.cat([subset_boxes, probs.reshape(-1, 1)], dim=1)
+            box_probs = np.concatenate([subset_boxes, probs.reshape(-1, 1)], dim=1)
             box_probs = nms(box_probs, self.nms_method,
                                       score_threshold=prob_threshold,
                                       iou_threshold=self.iou_threshold,
@@ -60,10 +52,10 @@ class Predictor:
             picked_box_probs.append(box_probs)
             picked_labels.extend([class_index] * box_probs.size(0))
         if not picked_box_probs:
-            return torch.tensor([]), torch.tensor([]), torch.tensor([])
-        picked_box_probs = torch.cat(picked_box_probs)
+            return [], [], []
+        picked_box_probs = np.concatenate(picked_box_probs)
         picked_box_probs[:, 0] *= width
         picked_box_probs[:, 1] *= height
         picked_box_probs[:, 2] *= width
         picked_box_probs[:, 3] *= height
-        return picked_box_probs[:, :4], torch.tensor(picked_labels), picked_box_probs[:, 4]
+        return picked_box_probs[:, :4], picked_labels, picked_box_probs[:, 4]

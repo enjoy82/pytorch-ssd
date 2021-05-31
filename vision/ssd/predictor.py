@@ -19,7 +19,7 @@ class Predictor:
         if device:
             self.device = device
         else:
-            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            self.device =  torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.net.to(self.device)
         self.net.eval()
@@ -27,13 +27,14 @@ class Predictor:
         self.timer = Timer()
 
     def predict(self, image, top_k=-1, prob_threshold=None):
-        cpu_device = torch.device("cpu")
+        cpu_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         height, width, _ = image.shape
         image = self.transform(image)
         images = image.unsqueeze(0)
         images = images.to(self.device)
         with torch.no_grad():
             self.timer.start()
+            print(self.net.forward(images)[0].shape, self.net.forward(images)[1].shape,)
             scores, boxes = self.net.forward(images)
             print(boxes, scores)
             print(boxes.shape, scores.shape)

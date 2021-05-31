@@ -3,7 +3,6 @@
 import cv2
 import numpy as np
 import types
-from numpy import random
 
 class Compose(object):
     """Composes several augmentations together.
@@ -36,8 +35,6 @@ class Lambda(object):
         return self.lambd(img, boxes, labels)
 
 
-
-
 class SubtractMeans(object):
     def __init__(self, mean):
         self.mean = np.array(mean, dtype=np.float32)
@@ -56,7 +53,3 @@ class Resize(object):
         image = cv2.resize(image, (self.size,
                                  self.size))
         return image, boxes, labels
-
-class ToTensor(object):
-    def __call__(self, cvimage, boxes=None, labels=None):
-        return torch.from_numpy(cvimage.astype(np.float32)).permute(2, 0, 1), boxes, labels

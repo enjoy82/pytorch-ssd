@@ -5,7 +5,7 @@ import cv2
 import sys
 
 
-image_path = "./images/test_ball.jpg"
+image_path = "./images/test/0b9edee2d367afd3.jpg"
 
 model_path = "./models/mbv3-v2-Epoch-65-Loss-4.263951171823099.pth" #モデル名
 label_path = "./models/open-images-model-labels.txt"

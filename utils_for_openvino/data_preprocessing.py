@@ -8,7 +8,6 @@ class PredictionTransform:
             Resize(size),
             SubtractMeans(mean),
             lambda img, boxes=None, labels=None: (img / std, boxes, labels),
-            ToTensor()
         ])
 
     def __call__(self, image):
