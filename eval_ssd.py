@@ -140,7 +140,7 @@ if __name__ == '__main__':
             boxes + 1.0  # matlab's indexes start from 1
         ], dim=1))
     results = torch.cat(results)
-    """
+    
     for class_index, class_name in enumerate(class_names):
         if class_index == 0: continue  # ignore background
         prediction_path = eval_path / f"det_test_{class_name}.txt"
@@ -171,4 +171,3 @@ if __name__ == '__main__':
         print(f"{class_name}: {ap}")
 
     print(f"\nAverage Precision Across All Classes:{sum(aps)/len(aps)}")
-    """

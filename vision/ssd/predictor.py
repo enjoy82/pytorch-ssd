@@ -34,10 +34,7 @@ class Predictor:
         images = images.to(self.device)
         with torch.no_grad():
             self.timer.start()
-            print(self.net.forward(images)[0].shape, self.net.forward(images)[1].shape,)
             scores, boxes = self.net.forward(images)
-            print(boxes, scores)
-            print(boxes.shape, scores.shape)
             print("Inference time: ", self.timer.end())
         boxes = boxes[0]
         scores = scores[0]
@@ -52,7 +49,7 @@ class Predictor:
             probs = scores[:, class_index]
             mask = probs > prob_threshold
             probs = probs[mask]
-            if probs.size(0) == 0:
+            if probs.size(0) == 0:   
                 continue
             subset_boxes = boxes[mask, :]
             box_probs = torch.cat([subset_boxes, probs.reshape(-1, 1)], dim=1)

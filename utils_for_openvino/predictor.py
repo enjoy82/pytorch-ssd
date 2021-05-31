@@ -42,7 +42,7 @@ class Predictor:
             probs = scores[:, class_index]
             mask = probs > prob_threshold
             probs = probs[mask]
-            if probs.size(0) == 0:
+            if len(probs) == 0:
                 continue
             subset_boxes = boxes[mask, :]
             box_probs = np.concatenate([subset_boxes, probs.reshape(-1, 1)], dim=1)
@@ -53,7 +53,7 @@ class Predictor:
                                       top_k=top_k,
                                       candidate_size=self.candidate_size)
             picked_box_probs.append(box_probs)
-            picked_labels.extend([class_index] * box_probs.size(0))
+            picked_labels.extend([class_index] * len(box_probs))
         if not picked_box_probs:
             return [], [], []
         picked_box_probs = np.concatenate(picked_box_probs)
