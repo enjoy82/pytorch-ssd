@@ -50,14 +50,10 @@ while True:
     #    continue
     frame = cv2.imread("./gun.jpg")
     # 入力データフォーマットへ変換 
-    img = cv2.resize(frame, (image_sige, image_sige))   # サイズ変更 
-    img = img.transpose((2, 0, 1))    # HWC > CHW 
-    img = np.expand_dims(img, axis=0) # 次元合せ 
-    
     # 推論実行 
     #out = exec_net.infer(inputs={input_blob_name: img})
     #print(out.shape)
-    boxes, labels, probs = predictor.predict(img)
+    boxes, labels, probs = predictor.predict(frame)
     # 出力から必要なデータのみ取り出し 
     #out = out[output_blob_name]
     

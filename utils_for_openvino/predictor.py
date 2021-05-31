@@ -20,9 +20,7 @@ class Predictor:
 
     def predict(self, image, top_k=-1, prob_threshold=None):
         image = self.transform(image)
-        image = image.unsqueeze(0)
-        height, width, k = image.shape
-        print(height, width, k)
+        height, width= image.shape[1:]
 
         image = image.transpose((2, 0, 1))    # HWC > CHW 
         image = np.expand_dims(image, axis=0) # 次元合せ 
@@ -40,7 +38,7 @@ class Predictor:
         print(boxes.shape, scores.shape)
         picked_box_probs = []
         picked_labels = []
-        for class_index in range(1, scores.size(1)):
+        for class_index in range(1, len(scores)):
             probs = scores[:, class_index]
             mask = probs > prob_threshold
             probs = probs[mask]
