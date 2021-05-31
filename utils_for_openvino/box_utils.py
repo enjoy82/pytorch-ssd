@@ -1,7 +1,7 @@
 import numpy as np
 from typing import List
 
-def area_of(left_top, right_bottom) -> torch.Tensor:
+def area_of(left_top, right_bottom):
     """Compute the areas of rectangles given two corners.
 
     Args:
