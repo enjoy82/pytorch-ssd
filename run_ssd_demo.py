@@ -30,7 +30,7 @@ predictor = create_mobilenetv3_small_ssd_lite_predictor(exec_net, image_sige = i
 
 #print("stand", input_blob_name, output_blob_name)
 # カメラ準備 
-cap = cv2.VideoCapture(0)
+#cap = cv2.VideoCapture(0)
 
 if cap.isOpened() != True:
     print("camera open error!")
@@ -39,17 +39,16 @@ else:
     print("camera open!")
 
 
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, windowwidth)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, windowheight)
+#cap.set(cv2.CAP_PROP_FRAME_WIDTH, windowwidth)
+#cap.set(cv2.CAP_PROP_FRAME_HEIGHT, windowheight)
 
 # メインループ 
 while True:
-    ret, frame = cap.read()
- 
+    #ret, frame = cap.read()
     # Reload on error 
-    if ret == False:
-        continue
- 
+    #if ret == False:
+    #    continue
+    frame =  cv2.imread("./images/test/0b9edee2d367afd3jpg")
     # 入力データフォーマットへ変換 
     img = cv2.resize(frame, (image_sige, image_sige))   # サイズ変更 
     img = img.transpose((2, 0, 1))    # HWC > CHW 
@@ -79,6 +78,7 @@ while True:
     
     # 何らかのキーが押されたら終了 
     key = cv2.waitKey(1)
+    break
     if key != -1:
         break
     
