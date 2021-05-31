@@ -21,7 +21,7 @@ class Predictor:
     def predict(self, image, top_k=-1, prob_threshold=None):
         height, width, _ = image.shape
         image = self.transform(image)
-        images = image.unsqueeze(0)
+        image = image.unsqueeze(0)
 
         res = self.openvinonet.infer(inputs={self.input: image})
         boxes = res[self.output[0]][0]

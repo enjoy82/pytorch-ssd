@@ -26,7 +26,7 @@ input_blob_name = list(net.inputs.keys())[0]
 output_blob_name = list(net.outputs.keys())
 
 #predictor
-predictor = create_mobilenetv3_small_ssd_lite_predictor(exec_net, image_sige = image_sige,  nms_method=nms_method, input = input_blob_name, output = output_blob_name)
+predictor = create_mobilenetv3_small_ssd_lite_predictor(exec_net, image_size = image_sige,  nms_method=nms_method, input = input_blob_name, output = output_blob_name)
 
 #print("stand", input_blob_name, output_blob_name)
 # カメラ準備 
