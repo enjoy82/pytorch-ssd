@@ -50,8 +50,6 @@ class Resize(object):
         self.size = size
 
     def __call__(self, image, boxes=None, labels=None):
-        print(self.size)
-        print(type(image))
         image = cv2.resize(image, (self.size,
                                  self.size))
         return image, boxes, labels

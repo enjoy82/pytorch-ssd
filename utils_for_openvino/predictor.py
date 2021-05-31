@@ -23,6 +23,11 @@ class Predictor:
         image = image.unsqueeze(0)
         height, width, k = image.shape
         print(height, width, k)
+
+        image = image.transpose((2, 0, 1))    # HWC > CHW 
+        image = np.expand_dims(image, axis=0) # 次元合せ 
+
+        #推論
         res = self.openvinonet.infer(inputs={self.input: image})
         boxes = res[self.output[0]][0]
         scores = res[self.output[1]][0]
