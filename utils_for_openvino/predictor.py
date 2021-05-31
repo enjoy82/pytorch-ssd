@@ -33,9 +33,7 @@ class Predictor:
 
         if not prob_threshold:
             prob_threshold = self.filter_threshold
-        # this version of nms is slower on GPU, so we move data to CPU.
         #TODO
-        print(boxes.shape, scores.shape)
         picked_box_probs = []
         picked_labels = []
         for class_index in range(1, len(scores)):
@@ -45,7 +43,7 @@ class Predictor:
             if len(probs) == 0:
                 continue
             subset_boxes = boxes[mask, :]
-            box_probs = np.concatenate([subset_boxes, probs.reshape(-1, 1)], dim=1)
+            box_probs = np.concatenate([subset_boxes, probs.reshape(-1, 1)], 1)
             box_probs = nms(box_probs, self.nms_method,
                                       score_threshold=prob_threshold,
                                       iou_threshold=self.iou_threshold,

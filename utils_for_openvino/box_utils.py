@@ -48,6 +48,7 @@ def hard_nms(box_scores, iou_threshold, top_k=-1, candidate_size=200):
     scores = box_scores[:, -1]
     boxes = box_scores[:, :-1]
     picked = []
+    #TODO scoresあってる？torchと比較すべき、無駄な次元ならいらない
     _, indexes = scores.sort(descending=True)
     indexes = indexes[:candidate_size]
     while len(indexes) > 0:

@@ -79,5 +79,5 @@ while True:
         break
     
 # 終了処理 
-cap.release()
+#cap.release()
 cv2.destroyAllWindows()
