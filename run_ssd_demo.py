@@ -56,8 +56,8 @@ while True:
     boxes, labels, probs = predictor.predict(frame)
     # 出力から必要なデータのみ取り出し 
     #out = out[output_blob_name]
-    
-    for i in range(boxes.size(0)):
+    print(boxes, labels, probs)
+    for i in range(len(boxes[0])):
         box = boxes[i, :]
         cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 4)
         #label = f"""{voc_dataset.class_names[labels[i]]}: {probs[i]:.2f}"""
@@ -71,7 +71,7 @@ while True:
     
     # 画像表示 
     cv2.imshow('frame', frame)
-    
+    cv2.imwrite("./test.png", frame)
     # 何らかのキーが押されたら終了 
     key = cv2.waitKey(1)
     break
