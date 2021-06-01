@@ -61,7 +61,7 @@ while True:
     boxed = [] #重複box
     for i in range(len(boxes[0])):
         box = boxes[i, :]
-        box = int(box)
+        box = list(map(int, box))
         if len(boxed) != 0 and np.all(box == boxed, axis = 1).sum():
             continue
         label = class_names[labels[i]] + str(probs[i])
