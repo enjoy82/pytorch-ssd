@@ -49,13 +49,9 @@ while True:
     #if ret == False:
     #    continue
     frame = cv2.imread("./gun.jpg")
-    # 入力データフォーマットへ変換 
-    # 推論実行 
-    #out = exec_net.infer(inputs={input_blob_name: img})
-    #print(out.shape)
     boxes, labels, probs = predictor.predict(frame,10, 0.4) #TODO 閾値
     # 出力から必要なデータのみ取り出し 
-    #TODO prob１００%間違ってる
+    #TODO label怪しい
     print(boxes, labels, probs)
 
     boxed = [] #重複box
@@ -81,7 +77,6 @@ while True:
     
     # 画像表示 
     cv2.imshow('frame', frame)
-    cv2.imwrite("./test.png", frame)
     # 何らかのキーが押されたら終了 
     key = cv2.waitKey(1)
     break

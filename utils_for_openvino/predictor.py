@@ -20,11 +20,9 @@ class Predictor:
 
     def predict(self, image, top_k=-1, prob_threshold=None):
         image = self.transform(image)
-        height, width= image.shape[1:]
+        height, width, _= image.shape
 
         image = image.transpose((2, 0, 1))    # HWC > CHW 
-        image = np.expand_dims(image, axis=0) # 次元合せ 
-
         #推論
         res = self.openvinonet.infer(inputs={self.input: image})
         boxes = res[self.output[0]][0]
@@ -42,6 +40,7 @@ class Predictor:
             probs = probs[mask]
             if len(probs) == 0:
                 continue
+            #ここから確認する
             subset_boxes = boxes[mask, :]
             box_probs = np.concatenate([subset_boxes, probs.reshape(-1, 1)], 1)
             box_probs = nms(box_probs, self.nms_method,
