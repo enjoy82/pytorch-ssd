@@ -1,5 +1,5 @@
 import numpy as np
-from .box_utils import nms
+from .box_utils_numpy import nms
 from .data_preprocessing import PredictionTransform
 from .misc import Timer
 
@@ -33,11 +33,10 @@ class Predictor:
 
         if not prob_threshold:
             prob_threshold = self.filter_threshold
-        #TODO
+
         picked_box_probs = []
         picked_labels = []
-        print("OK", scores.shape)
-        for class_index in range(1, len(scores)):
+        for class_index in range(1, len(scores[1])):
             probs = scores[:, class_index]
             mask = probs > prob_threshold
             probs = probs[mask]
@@ -45,6 +44,7 @@ class Predictor:
                 continue
             subset_boxes = boxes[mask, :]
             box_probs = np.concatenate([subset_boxes, probs.reshape(-1, 1)], 1)
+            #TODO
             box_probs = nms(box_probs, self.nms_method,
                                       score_threshold=prob_threshold,
                                       iou_threshold=self.iou_threshold,
