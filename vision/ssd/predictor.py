@@ -45,6 +45,7 @@ class Predictor:
         scores = scores.to(cpu_device)
         picked_box_probs = []
         picked_labels = []
+        print(scores.size(1))
         for class_index in range(1, scores.size(1)):
             probs = scores[:, class_index]
             mask = probs > prob_threshold

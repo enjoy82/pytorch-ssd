@@ -133,6 +133,7 @@ if __name__ == '__main__':
         boxes, labels, probs = predictor.predict(image)
         print("Prediction: {:4f} seconds.".format(timer.end("Predict")))
         indexes = torch.ones(labels.size(0), 1, dtype=torch.float32) * i
+        """
         results.append(torch.cat([
             indexes.reshape(-1, 1),
             labels.reshape(-1, 1).float(),
@@ -171,3 +172,4 @@ if __name__ == '__main__':
         print(f"{class_name}: {ap}")
 
     print(f"\nAverage Precision Across All Classes:{sum(aps)/len(aps)}")
+    """

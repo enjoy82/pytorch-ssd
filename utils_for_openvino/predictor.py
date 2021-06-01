@@ -36,6 +36,7 @@ class Predictor:
         #TODO
         picked_box_probs = []
         picked_labels = []
+        print("OK", scores.shape)
         for class_index in range(1, len(scores)):
             probs = scores[:, class_index]
             mask = probs > prob_threshold
