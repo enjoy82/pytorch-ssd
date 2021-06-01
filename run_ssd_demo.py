@@ -62,7 +62,11 @@ while True:
     for i in range(len(boxes[0])):
         box = boxes[i, :]
         box = list(map(int, box))
-        if len(boxed) != 0 and np.all(box == boxed, axis = 1).sum():
+        flag = 1
+        for b in boxed:
+            if np.all(box == b):
+                flag = 0
+        if flag == 0:
             continue
         label = class_names[labels[i]] + str(probs[i])
         boxed.append(box)
