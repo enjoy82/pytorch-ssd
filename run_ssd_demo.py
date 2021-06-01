@@ -53,17 +53,24 @@ while True:
     # 推論実行 
     #out = exec_net.infer(inputs={input_blob_name: img})
     #print(out.shape)
-    boxes, labels, probs = predictor.predict(frame)
+    boxes, labels, probs = predictor.predict(frame,10, 0.2) #TODO 閾値
     # 出力から必要なデータのみ取り出し 
     #out = out[output_blob_name]
     print(boxes, labels, probs)
+
+    boxed = [] #重複box
     for i in range(len(boxes[0])):
         box = boxes[i, :]
+        box = int(box)
+        if len(boxed) != 0 and np.all(box == boxed, axis = 1).sum():
+            continue
+        label = class_names[labels[i]] + str(probs[i])
+        boxed.append(box)
         cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 4)
         #label = f"""{voc_dataset.class_names[labels[i]]}: {probs[i]:.2f}"""
         #label = f"{class_names[labels[i]]}: {probs[i]:.2f}"
-        cv2.putText(frame, "test",
-                    (box[0] + 20, box[1] + 40),
+        cv2.putText(frame, label,
+                    (int(box[0]) + 20, int(box[1]) + 40),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     1,  # font scale
                     (255, 0, 255),
