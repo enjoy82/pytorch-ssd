@@ -27,8 +27,9 @@ class Predictor:
 
         #推論
         res = self.openvinonet.infer(inputs={self.input: image})
-        scores = res[self.output[0]][0]
-        boxes = res[self.output[1]][0]
+        boxes = res[self.output[0]]
+        scores = res[self.output[1]]
+        print(boxes.shape, scores.shape)
         #TODO check this algorithm
 
         if not prob_threshold:

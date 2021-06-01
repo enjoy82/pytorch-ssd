@@ -23,7 +23,7 @@ plugin = IEPlugin(device="MYRIAD")
 net = IENetwork(model='./models/mbv3-ssd-v1.xml', weights='./models/mbv3-ssd-v1.bin')
 exec_net = plugin.load(network=net)
 input_blob_name = list(net.inputs.keys())[0]
-output_blob_name = list(net.outputs.keys())
+output_blob_name = sorted(list(net.outputs.keys()))
 
 #predictor
 predictor = create_mobilenetv3_small_ssd_lite_predictor(exec_net, image_size = image_sige,  nms_method=nms_method, input = input_blob_name, output = output_blob_name)
