@@ -53,6 +53,8 @@ while True:
     # 出力から必要なデータのみ取り出し 
     #TODO label怪しい
     print(boxes, labels, probs)
+    
+    frame = cv2.resize(frame, (300, 300))
 
     boxed = [] #重複box
     for i in range(len(boxes)):
@@ -76,9 +78,10 @@ while True:
                     2)  # line type
     
     # 画像表示 
-    cv2.imshow('frame', frame)
+    #cv2.imshow('frame', frame)
     # 何らかのキーが押されたら終了 
-    key = cv2.waitKey(1)
+    #key = cv2.waitKey(1)
+    cv2.imwrite("./test.png", frame)
     break
     if key != -1:
         break
