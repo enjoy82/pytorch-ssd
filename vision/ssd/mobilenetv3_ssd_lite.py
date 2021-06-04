@@ -68,11 +68,11 @@ def create_mobilenetv3_small_ssd_lite(num_classes, width_mult=1.0, use_batch_nor
 
     regression_headers = ModuleList([
         SeperableConv2d(in_channels=round(48 * width_mult), out_channels=6 * 4,
-                        kernel_size=3, padding=1, onnx_compatible=False),
-        SeperableConv2d(in_channels=576, out_channels=6 * 4, kernel_size=3, padding=1, onnx_compatible=False),
-        SeperableConv2d(in_channels=512, out_channels=6 * 4, kernel_size=3, padding=1, onnx_compatible=False),
-        SeperableConv2d(in_channels=256, out_channels=6 * 4, kernel_size=3, padding=1, onnx_compatible=False),
-        SeperableConv2d(in_channels=256, out_channels=6 * 4, kernel_size=3, padding=1, onnx_compatible=False),
+                        kernel_size=3, padding=1, onnx_compatible=onnx_compatible),
+        SeperableConv2d(in_channels=576, out_channels=6 * 4, kernel_size=3, padding=1, onnx_compatible=onnx_compatible),
+        SeperableConv2d(in_channels=512, out_channels=6 * 4, kernel_size=3, padding=1, onnx_compatible=onnx_compatible),
+        SeperableConv2d(in_channels=256, out_channels=6 * 4, kernel_size=3, padding=1, onnx_compatible=onnx_compatible),
+        SeperableConv2d(in_channels=256, out_channels=6 * 4, kernel_size=3, padding=1, onnx_compatible=onnx_compatible),
         Conv2d(in_channels=64, out_channels=6 * 4, kernel_size=1),
     ])
 
