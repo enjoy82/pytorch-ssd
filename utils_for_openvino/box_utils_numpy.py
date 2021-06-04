@@ -54,16 +54,17 @@ def hard_nms(box_scores, iou_threshold, top_k=-1, candidate_size=200):
     #_, indexes = scores.sort(descending=True)
     indexes = np.argsort(scores)
     #indexes = indexes[:candidate_size]
-    indexes = indexes[-candidate_size:]
+    indexes = indexes[::-1]
+    indexes = indexes[:candidate_size]
     while len(indexes) > 0:
-        #current = indexes[0]
-        current = indexes[-1]
+        current = indexes[0]
+        #current = indexes[-1]
         picked.append(current)
         if 0 < top_k == len(picked) or len(indexes) == 1:
             break
         current_box = boxes[current, :]
-        #indexes = indexes[1:]
-        indexes = indexes[:-1]
+        indexes = indexes[1:]
+        #indexes = indexes[:-1]
         rest_boxes = boxes[indexes, :]
         iou = iou_of(
             rest_boxes,
