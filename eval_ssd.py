@@ -98,7 +98,7 @@ def compute_average_precision_per_class(num_true_cases, gt_boxes, difficult_case
 
 #設定
 dataset_path = "./images"
-trained_model = "./models/mbv3-v2-Epoch-65-Loss-4.263951171823099.pth" #モデルパス
+trained_model = "./models/mbv3-v3-Epoch-60-Loss-5.104689827371151.pth" #モデルパス
 nms_method = "hard"
 iou_threshold = 0.5 #"The threshold of Intersection over Union."
 use_2007_metric = True
@@ -130,9 +130,13 @@ if __name__ == '__main__':
         image = dataset.get_image(i)
         print("Load Image: {:4f} seconds.".format(timer.end("Load Image")))
         timer.start("Predict")
-        boxes, labels, probs = predictor.predict(image) #閾値いれるべきでは？
+        boxes, labels, probs = predictor.predict(image, 10, 0.2) #閾値いれるべきでは？
         print("Prediction: {:4f} seconds.".format(timer.end("Predict")))
         indexes = torch.ones(labels.size(0), 1, dtype=torch.float32) * i
+        indexes = indexes.to(DEVICE)
+        boxes = boxes.to(DEVICE)
+        labels = labels.to(DEVICE)
+        probs = probs.to(DEVICE)
         results.append(torch.cat([
             indexes.reshape(-1, 1),
             labels.reshape(-1, 1).float(),
@@ -147,7 +151,7 @@ if __name__ == '__main__':
         with open(prediction_path, "w") as f:
             sub = results[results[:, 1] == class_index, :]
             for i in range(sub.size(0)):
-                prob_box = sub[i, 2:].numpy()
+                prob_box = sub[i, 2:].to('cpu').detach().numpy().copy()
                 image_id = dataset.ids[int(sub[i, 0])]
                 print(
                     image_id + " " + " ".join([str(v) for v in prob_box]),
