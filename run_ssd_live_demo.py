@@ -61,15 +61,14 @@ while True:
     # Reload on error 
     if ret == False:
         continue
+    frame = cv2.resize(frame, (300, 300))
     print(frame.shape)
     boxes, labels, probs = predictor.predict(frame,10, 0.4) #TODO 閾値
     # 出力から必要なデータのみ取り出し 
-    
-    #frame = cv2.resize(frame, (300, 300))
 
     boxed = [] #重複box
     
-    labels = label_change
+    labels = label_change(labels)
 
     for i in range(len(boxes)):
         box = boxes[i, :]
