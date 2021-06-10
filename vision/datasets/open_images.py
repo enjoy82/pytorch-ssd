@@ -93,7 +93,9 @@ class OpenImagesDataset:
         return "\n".join(content)
 
     def _read_image(self, image_id):
-        image_file = self.root / self.dataset_type / f"{image_id}.jpg"
+        #書き換え、アノテーションファイルから相対パスで読み取る
+        #image_file = self.root / self.dataset_type / f"{image_id}.jpg"
+        image_file = image_id
         image = cv2.imread(str(image_file))
         if image.shape[2] == 1:
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
