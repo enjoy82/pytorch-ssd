@@ -1,4 +1,0 @@
-BACKGROUND
-Bottle
-Box
-Ball
