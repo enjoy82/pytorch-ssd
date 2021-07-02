@@ -28,7 +28,6 @@ class Predictor:
         boxes = res[self.output[0]][0]
         scores = res[self.output[1]][0]
         #TODO check this algorithm
-
         if not prob_threshold:
             prob_threshold = self.filter_threshold
 

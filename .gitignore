@@ -11,7 +11,7 @@ eval_results/
 # images
 *.jpg
 *.png
-
+*.JPG
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
