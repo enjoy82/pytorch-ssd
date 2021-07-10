@@ -7,7 +7,10 @@ eval_results/
 
 # Pytorch Models
 *.pth
-
+*.zip
+*.json
+jsons
+output_onnx
 # images
 *.jpg
 *.png
