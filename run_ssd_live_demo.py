@@ -12,7 +12,7 @@ from openvino.inference_engine import IENetwork, IEPlugin
 #windowheight = 240
 image_size = 300
 nms_method = "hard"
-label_path = "./models/open-images-model-labels.txt"
+label_path = "./models/gakuv2/open-images-model-labels.txt"
 class_names = [name.strip() for name in open(label_path).readlines()]
 
 
@@ -20,7 +20,7 @@ class_names = [name.strip() for name in open(label_path).readlines()]
 plugin = IEPlugin(device="MYRIAD")
  
 # モデルの読み込み 
-net = IENetwork(model='./models/mbv3-ssd-v1.xml', weights='./models/mbv3-ssd-v1.bin')
+net = IENetwork(model='./models/forasp/mbv3-ssd-cornv1.xml', weights='./models/forasp/mbv3-ssd-cornv1.bin')
 exec_net = plugin.load(network=net)
 input_blob_name = list(net.inputs.keys())[0]
 output_blob_name = sorted(list(net.outputs.keys()))
@@ -48,8 +48,6 @@ def label_change(labels):
         if labels[i] == 1:
             labels[i] = 2
         elif labels[i] == 2:
-            labels[i] = 3
-        elif labels[i] == 3:
             labels[i] = 1
 
     return labels
@@ -62,7 +60,7 @@ while True:
     if ret == False:
         continue
     frame = cv2.resize(frame, (300, 300))
-    print(frame.shape)
+    #print(frame.shape)
     boxes, labels, probs = predictor.predict(frame,10, 0.4) #TODO 閾値
     # 出力から必要なデータのみ取り出し 
 
@@ -94,7 +92,7 @@ while True:
     cv2.imshow('frame', frame)
     # 何らかのキーが押されたら終了 
     #key = cv2.waitKey(1)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(1) and 0xFF == ord('q'):
         break
 cap.release()
 cv2.destroyAllWindows()

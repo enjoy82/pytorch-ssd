@@ -12,7 +12,7 @@ windowwidth = 320
 windowheight = 240
 image_sige = 300
 nms_method = "hard"
-label_path = "./models/open-images-model-labels.txt"
+label_path = "./models/gakuv2/open-images-model-labels.txt"
 class_names = [name.strip() for name in open(label_path).readlines()]
 
 
@@ -20,7 +20,7 @@ class_names = [name.strip() for name in open(label_path).readlines()]
 plugin = IEPlugin(device="MYRIAD")
  
 # モデルの読み込み 
-net = IENetwork(model='./models/mbv3-ssd-v1.xml', weights='./models/mbv3-ssd-v1.bin')
+net = IENetwork(model='./models/forasp/mbv3-ssd-cornv1.xml', weights='./models/forasp/mbv3-ssd-cornv1.bin')
 exec_net = plugin.load(network=net)
 input_blob_name = list(net.inputs.keys())[0]
 output_blob_name = sorted(list(net.outputs.keys()))
@@ -28,27 +28,28 @@ output_blob_name = sorted(list(net.outputs.keys()))
 #predictor
 predictor = create_mobilenetv3_small_ssd_lite_predictor(exec_net, image_size = image_sige,  nms_method=nms_method, input = input_blob_name, output = output_blob_name)
 
-#print("stand", input_blob_name, output_blob_name)
+print("stand", input_blob_name, output_blob_name)
 # カメラ準備 
-#cap = cv2.VideoCapture(0)
-"""
+cap = cv2.VideoCapture(0)
+
 if cap.isOpened() != True:
     print("camera open error!")
     quit()
 else:
     print("camera open!")
-"""
 
-#cap.set(cv2.CAP_PROP_FRAME_WIDTH, windowwidth)
-#cap.set(cv2.CAP_PROP_FRAME_HEIGHT, windowheight)
+
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, windowwidth)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, windowheight)
 
 # メインループ 
 while True:
-    #ret, frame = cap.read()
+    ret, frame = cap.read()
     # Reload on error 
-    #if ret == False:
-    #    continue
-    frame = cv2.imread("./gun.jpg")
+    if ret == False:
+        print("error")
+        continue
+    #frame = cv2.imread("./gun.jpg")
     boxes, labels, probs = predictor.predict(frame,10, 0.4) #TODO 閾値
     # 出力から必要なデータのみ取り出し 
     #TODO label怪しい
@@ -78,10 +79,10 @@ while True:
                     2)  # line type
     
     # 画像表示 
-    #cv2.imshow('frame', frame)
+    cv2.imshow('frame', frame)
     # 何らかのキーが押されたら終了 
-    #key = cv2.waitKey(1)
-    cv2.imwrite("./test.png", frame)
+    key = cv2.waitKey(1)
+    #cv2.imwrite("./test.png", frame)
     break
     if key != -1:
         break
