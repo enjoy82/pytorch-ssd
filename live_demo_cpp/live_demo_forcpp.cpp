@@ -54,16 +54,19 @@ bool ReadModel(const std::string &modelPath, CNNNetwork& network)
 bool ConfigureInput(CNNNetwork& network, InputsDataMap& input_info, std::string& input_name, const Precision precision, const Layout layout)
 {
     bool ret = true;
-
+    
     try
     {
+        //ここ死んでる
         input_info = InputsDataMap(network.getInputsInfo());
 
         for (auto&& input : input_info)
         {
             input_name = input.first;
             input.second->setPrecision(precision);
+            std::cout << "configure input start" << std::endl;
             input.second->setLayout(layout);
+            std::cout << "configure input start2" << std::endl;
         }
     }
     catch (const std::exception & ex)
@@ -78,7 +81,7 @@ bool ConfigureInput(CNNNetwork& network, InputsDataMap& input_info, std::string&
 bool ConfigureOutput(CNNNetwork& network, OutputsDataMap& output_info, std::string& output_name, const Precision precision, const Layout layout)
 {
     bool ret = true;
-
+    
     try
     {
         output_info = OutputsDataMap(network.getOutputsInfo());
@@ -233,7 +236,7 @@ int main(){
     InferRequest::Ptr async_infer_request;
     std::string input_name;
     std::string output_name;
-    std::string device = "MYRIAD";
+    std::string device = "GPU";
     //std::string device = "MYRIAD";
     std::string modelPath = "./models/mbv3-ssd-cornv1.xml";
     int result = 0;
@@ -255,14 +258,19 @@ int main(){
     if (!cap.set(cv::CAP_PROP_FRAME_HEIGHT, height)) std::cout << "camera set height error" << std::endl;
     cv::Mat frame;
     
-
+    //TODO refactor
     LoadPlugin(device, plugin);
     ReadModel(modelPath, network);
     ConfigureInput(network, input_info, input_name, Precision::U8, Layout::NCHW);
+    std::cout << "configure input OK" << std::endl;
     ConfigureOutput(network, output_info, output_name, Precision::FP32, Layout::NC);
+    std::cout << "configure output OK" << std::endl;
     LoadModel(network, plugin, executable_network);
+    std::cout << "LoadModel OK" << std::endl;
     CreateInferRequest(executable_network, async_infer_request);
-
+    std::cout << "CreateInferRequest OK" << std::endl;
+    DataPtr& output = output_info.begin()->second;
+    const SizeVector outputDims = output->getTensorDesc().getDims();
     const int numDetections = outputDims[2];
     const int objectSize = outputDims[3];
 
@@ -270,7 +278,6 @@ int main(){
         cv::imshow("frame", frame);
         int key = cv::waitKey(1);
 		if(key == 'q'){
-			
 			cv::destroyWindow("frame");
 			break;
         }
@@ -279,7 +286,7 @@ int main(){
         Infer(async_infer_request);
         //result = ProcessOutput(async_infer_request, output_name);
         cv::putText(frame, "test", cv::Point2f(0, 20), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 255));
-        const float *detections = infer_request->GetBlob(outputName)->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
+        const float *detections = async_infer_request->GetBlob(output_name)->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
         //TODO class classification
         for (int i = 0; i < numDetections; i++) {
             float confidence = detections[i * objectSize + 2];
@@ -300,9 +307,5 @@ int main(){
         }
 
         cv::imshow("object Detector", frame);
-
-        const int key = cv::waitKey(1);
-            if (27 == key)  // Esc
-                break;
     }
 }
