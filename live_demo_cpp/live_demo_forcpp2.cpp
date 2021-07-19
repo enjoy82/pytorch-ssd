@@ -4,7 +4,8 @@
 #include <opencv2/opencv.hpp>
 #include <ie_iextension.h>
 #include<fstream>
-
+#include <chrono>
+#include <thread>
 //#include <ext_list.hpp>
 #include <string>
 
@@ -39,10 +40,9 @@ bool LoadPlugin(const std::string& device, InferencePlugin& plugin)
 }
 
 
-bool ReadModel(const std::string &modelPath, CNNNetwork& network)
+bool ReadModel(const std::string &modelPath, CNNNetReader& network_reader)
 {
     bool ret = true;
-    CNNNetReader network_reader;
 
     try
     {
@@ -52,8 +52,6 @@ bool ReadModel(const std::string &modelPath, CNNNetwork& network)
         std::cout << (modelPath.substr(0, modelPath.size() - 4) + ".bin") << " " << checkFileExistence(modelPath.substr(0, modelPath.size() - 4) + ".bin") << std::endl;
         network_reader.ReadNetwork(modelPath);
         network_reader.ReadWeights(modelPath.substr(0, modelPath.size() - 4) + ".bin");
-        network_reader.getNetwork().setBatchSize(1);
-        network = network_reader.getNetwork();
     }
     catch (const std::exception & ex)
     {
@@ -64,7 +62,7 @@ bool ReadModel(const std::string &modelPath, CNNNetwork& network)
 
     return ret;
 }
-
+/*
 bool ConfigureInput(CNNNetwork& network, InputsDataMap& input_info, std::string& input_name, const Precision precision, const Layout layout)
 {
     bool ret = true;
@@ -88,7 +86,7 @@ bool ConfigureInput(CNNNetwork& network, InputsDataMap& input_info, std::string&
 
     return ret;
 }
-
+*/
 bool ConfigureOutput(CNNNetwork& network, OutputsDataMap& output_info, std::string& output_name, const Precision precision, const Layout layout)
 {
     bool ret = true;
@@ -126,12 +124,10 @@ bool LoadModel(CNNNetwork& network, InferencePlugin& plugin, ExecutableNetwork& 
     try
     {
         executable_network = plugin.LoadNetwork(network, {});
-        std::cout << "LoadModel end" << std::endl;
     }
     catch (const std::exception & ex)
     {
         OutputDebugStringA(ex.what());
-        std::cout << "LoadModel error" << std::endl;
         ret = false;
     }
 
@@ -154,7 +150,7 @@ bool CreateInferRequest(ExecutableNetwork& executable_network, InferRequest::Ptr
 
     return ret;
 }
-
+/*
 template <typename T>
 void matU8ToBlob(const cv::Mat& orig_image, InferenceEngine::Blob::Ptr& blob, int batchIndex = 0)
 {
@@ -179,37 +175,66 @@ void matU8ToBlob(const cv::Mat& orig_image, InferenceEngine::Blob::Ptr& blob, in
         }
     }
 }
+*/
+InferenceEngine::Blob::Ptr wrapMat2Blob(const cv::Mat &mat) {
+    size_t channels = mat.channels();
+    size_t height = mat.size().height;
+    size_t width = mat.size().width;
 
-bool PrepareInput(InferRequest::Ptr& async_infer_request, const std::string & input_name, const cv::Mat & image)
+    size_t strideH = mat.step.buf[0];
+    size_t strideW = mat.step.buf[1];
+
+    bool is_dense =
+            strideW == channels &&
+            strideH == channels * width;
+
+    InferenceEngine::TensorDesc tDesc(InferenceEngine::Precision::U8,
+                                      {1, channels, height, width},
+                                      InferenceEngine::Layout::NHWC);
+
+    return InferenceEngine::make_shared_blob<uint8_t>(tDesc, mat.data);
+}
+
+//やばい
+template <typename T>
+bool PrepareInput(InferenceEngine::InferRequest & infer_request, T & input_info, const cv::Mat & image)
 {
     bool ret = true;
 
     try
     {
-        Blob::Ptr input = async_infer_request->GetBlob(input_name);
-        matU8ToBlob<uint8_t>(image, input);
+        
+        for (auto & item : input_info) {
+            auto input_data = item.second;
+            Blob::Ptr imgBlob = wrapMat2Blob(image);
+            infer_request.SetBlob(item.first, imgBlob);
+        }
+        
     }
     catch (const std::exception & ex)
     {
         OutputDebugStringA(ex.what());
+        std::cout << "PrepareInput error!" << std::endl;
         ret = false;
     }
 
     return ret;
 }
 
-bool Infer(InferRequest::Ptr& async_infer_request)
+
+bool Infer(InferenceEngine::InferRequest & infer_request)
 {
     bool ret = true;
 
     try
     {
-        async_infer_request->StartAsync();
-        async_infer_request->Wait(IInferRequest::WaitMode::RESULT_READY);
+        infer_request.StartAsync();
+        infer_request.Wait(IInferRequest::WaitMode::RESULT_READY);
     }
     catch (const std::exception & ex)
     {
         OutputDebugStringA(ex.what());
+        std::cout << "Infer error!" << std::endl;
         ret = false;
     }
 
@@ -217,7 +242,8 @@ bool Infer(InferRequest::Ptr& async_infer_request)
 }
 
 //TODO 書き換え
-int ProcessOutput(InferRequest::Ptr& async_infer_request, const std::string& output_name)
+/*
+int ProcessOutput(InferenceEngine::InferRequest & infer_request, const std::string& output_name)
 {
 
     int result = 0;
@@ -225,7 +251,7 @@ int ProcessOutput(InferRequest::Ptr& async_infer_request, const std::string& out
 
     try
     {
-        const float* oneHotVector = async_infer_request->GetBlob(output_name)->buffer().as<float*>();
+        const float* oneHotVector = infer_request->GetBlob(output_name)->buffer().as<float*>();
 
         for (int i = 0; i < 10; i++)
         {
@@ -244,19 +270,17 @@ int ProcessOutput(InferRequest::Ptr& async_infer_request, const std::string& out
 
     return result;
 }
+*/
 
-
+//TODO refactor
 int main(){
-    InferencePlugin plugin;
-    CNNNetwork network;
-    InputsDataMap input_info;
-    OutputsDataMap output_info;
-    ExecutableNetwork executable_network;
-    InferRequest::Ptr async_infer_request;
+    InferenceEngine::Core core;
+    CNNNetReader network_reader;
     std::string input_name;
     std::string output_name;
     //std::string device = "GPU";
-    std::string device = "MYRIAD";
+    //std::string device = "MYRIAD";
+    std::string device = "CPU";
     std::string modelPath = "C:\\Users\\Naoya Yatsu\\Desktop\\code\\pytorch-ssd\\live_demo_cpp\\models\\mbv3-ssd-cornv1.xml";
     int result = 0;
 
@@ -278,21 +302,54 @@ int main(){
     cv::Mat frame;
     
     //TODO refactor
-    LoadPlugin(device, plugin);
-    ReadModel(modelPath, network);
-    ConfigureInput(network, input_info, input_name, Precision::U8, Layout::NCHW);
+    //LoadPlugin(device, plugin);
+    ReadModel(modelPath, network_reader);
+    auto network = network_reader.getNetwork();
+    InferenceEngine::InputsDataMap input_info(network.getInputsInfo());
+    InferenceEngine::OutputsDataMap output_info(network.getOutputsInfo());
+    //ConfigureInput(network, input_info, input_name, Precision::U8, Layout::NCHW);
     std::cout << "configure input end" << std::endl;
-    ConfigureOutput(network, output_info, output_name, Precision::FP32, Layout::CHW);
+
+    for (auto &item : input_info) {
+        input_name = item.first;
+        auto input_data = item.second;
+        input_data->setPrecision(Precision::U8);
+        input_data->setLayout(Layout::NCHW);
+        input_data->getPreProcess().setResizeAlgorithm(RESIZE_BILINEAR);
+        input_data->getPreProcess().setColorFormat(ColorFormat::RGB);
+    }
+    std::cout << typeid(input_info).name() << std::endl;
+    std::cout << "input_data input end" << std::endl;
+    for (auto &item : output_info) {
+        auto output_data = item.second;
+        std::cout << "output item now" << std::endl;
+        output_data->setPrecision(Precision::FP32);
+        std::cout << "output item now2" << std::endl;
+        output_data->setLayout(Layout::CHW);
+        std::cout << "output item now3" << std::endl;
+    }
+    //ConfigureOutput(network, output_info, output_name, Precision::FP32, Layout::NC);
     std::cout << "configure output end" << std::endl;
-    LoadModel(network, plugin, executable_network);
+
+    std::map<std::string, std::string> config = {{ PluginConfigParams::KEY_PERF_COUNT, PluginConfigParams::YES }};
+    auto executable_network = core.LoadNetwork(network, device, config);
+    
+    //LoadModel(network, plugin, executable_network);
     std::cout << "LoadModel end" << std::endl;
-    CreateInferRequest(executable_network, async_infer_request);
+
+    std::chrono::milliseconds timespan(3000); // or whatever
+
+    //CreateInferRequest(executable_network, async_infer_request);
+    InferenceEngine::InferRequest infer_request = executable_network.CreateInferRequest();
+    std::cout << typeid(infer_request).name() << std::endl;
     std::cout << "CreateInferRequest end" << std::endl;
+    /*
     DataPtr& output = output_info.begin()->second;
     const SizeVector outputDims = output->getTensorDesc().getDims();
     const int numDetections = outputDims[2];
     const int objectSize = outputDims[3];
-
+    */
+    //std::this_thread::sleep_for(timespan);
     while(cap.read(frame)){
         cv::imshow("frame", frame);
         int key = cv::waitKey(1);
@@ -300,12 +357,14 @@ int main(){
 			cv::destroyWindow("frame");
 			break;
         }
+        std::cout << "call" << std::endl;
+        PrepareInput(infer_request, input_info, frame);
+        Infer(infer_request);
         
-        PrepareInput(async_infer_request, input_name, frame);
-        Infer(async_infer_request);
         //result = ProcessOutput(async_infer_request, output_name);
         cv::putText(frame, "test", cv::Point2f(0, 20), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 255));
-        const float *detections = async_infer_request->GetBlob(output_name)->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
+        /*
+        const float *detections = infer_request->GetBlob(output_name)->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
         //TODO class classification
         for (int i = 0; i < numDetections; i++) {
             float confidence = detections[i * objectSize + 2];
@@ -324,7 +383,7 @@ int main(){
                 cv::rectangle(frame, cv::Point2f(xmin, ymin), cv::Point2f(xmax, ymax), cv::Scalar(0, 0, 255));
             }
         }
-
-        cv::imshow("object Detector", frame);
+        */
+        cv::imshow("frame", frame);
     }
 }
