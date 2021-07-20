@@ -195,20 +195,14 @@ InferenceEngine::Blob::Ptr wrapMat2Blob(const cv::Mat &mat) {
 }
 
 //やばい
-template <typename T>
-bool PrepareInput(InferenceEngine::InferRequest & infer_request, T & input_info, const cv::Mat & image)
+bool PrepareInput(InferenceEngine::InferRequest & infer_request, std::string & input_name, const cv::Mat & image)
 {
     bool ret = true;
 
     try
     {
-        
-        for (auto & item : input_info) {
-            auto input_data = item.second;
-            Blob::Ptr imgBlob = wrapMat2Blob(image);
-            infer_request.SetBlob(item.first, imgBlob);
-        }
-        
+        Blob::Ptr imgBlob = wrapMat2Blob(image);
+        infer_request.SetBlob(input_name, imgBlob);
     }
     catch (const std::exception & ex)
     {
@@ -271,6 +265,39 @@ int ProcessOutput(InferenceEngine::InferRequest & infer_request, const std::stri
 }
 */
 
+template <typename T>
+void matU8ToBlob(const cv::Mat& orig_image, InferenceEngine::Blob::Ptr& blob, int batchIndex = 0) {
+    InferenceEngine::SizeVector blobSize = blob->getTensorDesc().getDims();
+    const size_t width = blobSize[3];
+    const size_t height = blobSize[2];
+    const size_t channels = blobSize[1];
+    InferenceEngine::MemoryBlob::Ptr mblob = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob);
+    if (!mblob) {
+        std::cout << "mblob empty" << std::endl; 
+    }
+    // locked memory holder should be alive all time while access to its buffer happens
+    auto mblobHolder = mblob->wmap();
+
+    T *blob_data = mblobHolder.as<T *>();
+
+    cv::Mat resized_image(orig_image);
+    if (static_cast<int>(width) != orig_image.size().width ||
+            static_cast<int>(height) != orig_image.size().height) {
+        cv::resize(orig_image, resized_image, cv::Size(width, height));
+    }
+
+    int batchOffset = batchIndex * width * height * channels;
+
+    for (size_t c = 0; c < channels; c++) {
+        for (size_t  h = 0; h < height; h++) {
+            for (size_t w = 0; w < width; w++) {
+                blob_data[batchOffset + c * width * height + h * width + w] =
+                        resized_image.at<cv::Vec3b>(h, w)[c];
+            }
+        }
+    }
+}
+
 //TODO refactor
 int main(){
     InferenceEngine::Core core;
@@ -278,8 +305,8 @@ int main(){
     std::string input_name;
     //std::string output_name;
     //std::string device = "GPU";
-    //std::string device = "MYRIAD";
-    std::string device = "CPU";
+    std::string device = "MYRIAD";
+    //std::string device = "CPU";
     std::string modelPath = "C:\\Users\\Naoya Yatsu\\Desktop\\code\\pytorch-ssd\\live_demo_cpp\\models\\mbv3-ssd-cornv1.xml";
     int result = 0;
 
@@ -287,8 +314,8 @@ int main(){
     //set up camera
     int camera_id = 0;
     double fps = 30.0;
-    double width = 640.0;
-    double height = 480.0;
+    double width = 320.0;
+    double height = 240.0;
     double input_width = 300.0;
     double input_height = 300.0;
     float threshold = 0.5;
@@ -301,7 +328,9 @@ int main(){
     if (!cap.set(cv::CAP_PROP_FRAME_WIDTH, width)) std::cout << "camera set width error" << std::endl;
     if (!cap.set(cv::CAP_PROP_FRAME_HEIGHT, height)) std::cout << "camera set height error" << std::endl;
     cv::Mat frame;
-    
+    //拾えているか確認
+    std::string cpuDeviceName = core.GetMetric(device, METRIC_KEY(FULL_DEVICE_NAME)).as<std::string>();
+    std::cout << cpuDeviceName << std::endl;
     //TODO refactor
     //LoadPlugin(device, plugin);
     ReadModel(modelPath, network_reader);
@@ -319,23 +348,16 @@ int main(){
         input_data->getPreProcess().setResizeAlgorithm(RESIZE_BILINEAR);
         input_data->getPreProcess().setColorFormat(ColorFormat::RGB);
     }
-    std::cout << typeid(input_info).name() << std::endl;
-    std::cout << "input_data input end" << std::endl;
     std::vector<std::string> output_names; //first is concat, second is softmax
     std::vector<int> numDetections;
     std::vector<int> objectSizes;
     for (auto &item : output_info) {
         output_names.push_back(item.first);
         auto output_data = item.second;
-        std::cout << "output item now" << std::endl;
         output_data->setPrecision(Precision::FP32);
-        std::cout << "output item now2" << std::endl;
         output_data->setLayout(Layout::CHW);
-        std::cout << "output item now3" << std::endl;
         const SizeVector outputDims = output_data->getTensorDesc().getDims();
-        std::cout << "output item now4" << std::endl;
         numDetections.push_back(outputDims[1]);
-        std::cout << "output item now5" << outputDims[2]  << " " << outputDims[1]  << " " << outputDims[0]<< std::endl;
         objectSizes.push_back(outputDims[2]);
     }
     for(int i = 0; i < output_names.size(); i++){
@@ -344,13 +366,11 @@ int main(){
     //ConfigureOutput(network, output_info, output_name, Precision::FP32, Layout::NC);
     std::cout << "configure output end" << std::endl;
     //TODO 変更
-    std::map<std::string, std::string> config = {{ PluginConfigParams::KEY_PERF_COUNT, PluginConfigParams::YES }};
-    auto executable_network = core.LoadNetwork(network, device, config);
-    
+    //std::map<std::string, std::string> config = {{ PluginConfigParams::KEY_PERF_COUNT, PluginConfigParams::YES }};
+    //auto executable_network = core.LoadNetwork(network, device, config);
+    auto executable_network = core.LoadNetwork(network, device);
     //LoadModel(network, plugin, executable_network);
     std::cout << "LoadModel end" << std::endl;
-
-    std::chrono::milliseconds timespan(3000); // or whatever
 
     //CreateInferRequest(executable_network, async_infer_request);
     InferenceEngine::InferRequest infer_request = executable_network.CreateInferRequest();
@@ -373,34 +393,65 @@ int main(){
 			break;
         }
         //std::cout << "call" << std::endl;
-        PrepareInput(infer_request, input_info, frame);
+        Blob::Ptr input_blob = infer_request.GetBlob(input_name);
+        matU8ToBlob<uint8_t>(frame, input_blob);
+        //PrepareInput(infer_request, input_name, frame);
         Infer(infer_request);
         //result = ProcessOutput(async_infer_request, output_name);
         //cv::putText(frame, "Test Frame", cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0,0,200), 2, false);
+        /*
         const float *output_concat = infer_request.GetBlob(output_names[0])->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
         const float *output_softmax = infer_request.GetBlob(output_names[1])->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
+        */
+        auto output_concat = infer_request.GetBlob(output_names[0]);
+        MemoryBlob::CPtr moutput1 = as<MemoryBlob>(output_concat);
+        auto moutputHolder1 = moutput1->rmap();
+        const float *detection_bound = moutputHolder1.as<const PrecisionTrait<Precision::FP32>::value_type *>();
         
-        std::vector<int> label, xmin, xmax, ymin, ymax;
+        auto output_softmax = infer_request.GetBlob(output_names[1]);
+        MemoryBlob::CPtr moutput2 = as<MemoryBlob>(output_softmax);
+        auto moutputHolder2 = moutput2->rmap();
+        const float *detection_soft = moutputHolder2.as<const PrecisionTrait<Precision::FP32>::value_type *>();
+        
+        //std::vector<int> label, xmin, xmax, ymin, ymax;
         for(int i = 0; i < numDetections[1]; i++){
-            for(int l = 1; l < 2; l++){ //first is background
-                if(output_softmax[i * objectSizes[1] + l] > threshold){
-                    label.push_back(l);
+            //std::cout << detection_bound[i * objectSizes[0]] *300 << " " << detection_bound[i * objectSizes[0] + 1] *300<< " " << detection_bound[i * objectSizes[0] + 2] *300<< " " << detection_bound[i * objectSizes[0] + 3] *300<< std::endl;
+            //std::cout << detection_soft[i * objectSizes[1]] << " " << detection_soft[i * objectSizes[1] + 1] << " " << detection_soft[i * objectSizes[1] + 2] << std::endl;
+            //cv::rectangle(frame, cv::Point(static_cast<int>(detection_bound[i * objectSizes[0]] *300),static_cast<int>(detection_bound[i * objectSizes[0] + 1] *300)), cv::Point(static_cast<int>(detection_bound[i * objectSizes[0] + 2] *300),static_cast<int>(detection_bound[i * objectSizes[0] + 3] *300)), cv::Scalar(255,0,0), 2);
+            
+            for(int l = 1; l < 3; l++){ //first is background
+                if(detection_soft[i * objectSizes[1] + l] > threshold){
+                    //label.push_back(l);
                     if(l == 2){
                         cv::putText(frame, "can Frame", cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0,0,200), 2, false);
                     }else{
-                        std::cout << i * objectSizes[1] + l << std::endl;
+                        //std::cout << i * objectSizes[1] + l << std::endl;
                         cv::putText(frame, "cone Frame", cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0,0,200), 2, false);
                     }
-                    xmin.push_back(std::max(0, static_cast<int>(output_concat[i * objectSizes[0]] * input_width)));
-                    ymin.push_back(std::max(0, static_cast<int>(output_concat[i * objectSizes[0] + 2] * input_width)));
-                    xmax.push_back(std::min(static_cast<int>(input_width), static_cast<int>(output_concat[i * objectSizes[0] + 1] * input_width)));
-                    ymax.push_back(std::min(static_cast<int>(input_height), static_cast<int>(output_concat[i * objectSizes[0] + 3] * input_height)));
-                    std::cout << output_softmax[i * objectSizes[1] + l] << " " <<  xmin[xmin.size() - 1] << " " << ymin[ymin.size() - 1] << " " << xmax[xmax.size() - 1] << " " << ymax[ymax.size() - 1]  << std::endl;
-                    cv::rectangle(frame, cv::Point(xmin[xmin.size() - 1],ymin[ymin.size() - 1]), cv::Point(xmax[xmax.size() - 1],ymax[ymax.size() - 1]), cv::Scalar(255,0,0), 2);
+                    int xmin = std::max(0, static_cast<int>(detection_bound[i * objectSizes[0]] * 300));
+                    int ymin = std::max(0, static_cast<int>(detection_bound[i * objectSizes[0] + 1] * 300));
+                    if(xmin > 300 || ymin > 300){
+                        continue;
+                    }
+                    int xmax = std::min(300, static_cast<int>(detection_bound[i * objectSizes[0] + 2] * 300));
+                    int ymax = std::min(300, static_cast<int>(detection_bound[i * objectSizes[0] + 3] * 300));
+                    if(xmax < 0 && ymax < 0){
+                        continue;
+                    }
+                    if(xmin > xmax || ymin > ymax){
+                        continue;
+                    }
+                    //xmin.push_back(std::max(0, static_cast<int>(detection_bound[i * objectSizes[0]] * input_width)));
+                    //ymin.push_back(std::max(0, static_cast<int>(detection_bound[i * objectSizes[0] + 2] * input_width)));
+                    //xmax.push_back(std::min(static_cast<int>(input_width), static_cast<int>(detection_bound[i * objectSizes[0] + 1] * input_width)));
+                    //ymax.push_back(std::min(static_cast<int>(input_height), static_cast<int>(detection_bound[i * objectSizes[0] + 3] * input_height)));
+                    //std::cout << detection_bound[i * objectSizes[0]] << " " << detection_bound[i * objectSizes[0] + 1] << " " << detection_bound[i * objectSizes[0] + 2] << " " << detection_bound[i * objectSizes[0] + 3] << std::endl;
+                    //std::cout << i * objectSizes[0] << " " << i * objectSizes[0] + 1 << " " << i * objectSizes[0] + 2 << " " << i * objectSizes[0] + 3 << std::endl;
+                    //std::cout << output_softmax[i * objectSizes[1] + l] << " " <<  xmin[xmin.size() - 1] << " " << ymin[ymin.size() - 1] << " " << xmax[xmax.size() - 1] << " " << ymax[ymax.size() - 1]  << std::endl;
+                    cv::rectangle(frame, cv::Point(xmin,ymin), cv::Point(xmax,ymax), cv::Scalar(255,0,0), 2);
                 }
             }
         }
-        
         
         cv::imshow("frame", frame);
     }
