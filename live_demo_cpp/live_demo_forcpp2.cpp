@@ -4,8 +4,7 @@
 #include <opencv2/opencv.hpp>
 #include <ie_iextension.h>
 #include<fstream>
-#include <chrono>
-#include <thread>
+#include <algorithm>
 //#include <ext_list.hpp>
 #include <string>
 
@@ -277,7 +276,7 @@ int main(){
     InferenceEngine::Core core;
     CNNNetReader network_reader;
     std::string input_name;
-    std::string output_name;
+    //std::string output_name;
     //std::string device = "GPU";
     //std::string device = "MYRIAD";
     std::string device = "CPU";
@@ -290,6 +289,8 @@ int main(){
     double fps = 30.0;
     double width = 640.0;
     double height = 480.0;
+    double input_width = 300.0;
+    double input_height = 300.0;
     float threshold = 0.5;
     cv::VideoCapture cap(cv::CAP_DSHOW + camera_id);
     if(!cap.isOpened()){ //エラー処理
@@ -320,17 +321,29 @@ int main(){
     }
     std::cout << typeid(input_info).name() << std::endl;
     std::cout << "input_data input end" << std::endl;
+    std::vector<std::string> output_names; //first is concat, second is softmax
+    std::vector<int> numDetections;
+    std::vector<int> objectSizes;
     for (auto &item : output_info) {
+        output_names.push_back(item.first);
         auto output_data = item.second;
         std::cout << "output item now" << std::endl;
         output_data->setPrecision(Precision::FP32);
         std::cout << "output item now2" << std::endl;
         output_data->setLayout(Layout::CHW);
         std::cout << "output item now3" << std::endl;
+        const SizeVector outputDims = output_data->getTensorDesc().getDims();
+        std::cout << "output item now4" << std::endl;
+        numDetections.push_back(outputDims[1]);
+        std::cout << "output item now5" << outputDims[2]  << " " << outputDims[1]  << " " << outputDims[0]<< std::endl;
+        objectSizes.push_back(outputDims[2]);
+    }
+    for(int i = 0; i < output_names.size(); i++){
+        std::cout << output_names[i] << " " << numDetections[i] << " " << objectSizes[i] << std::endl;
     }
     //ConfigureOutput(network, output_info, output_name, Precision::FP32, Layout::NC);
     std::cout << "configure output end" << std::endl;
-
+    //TODO 変更
     std::map<std::string, std::string> config = {{ PluginConfigParams::KEY_PERF_COUNT, PluginConfigParams::YES }};
     auto executable_network = core.LoadNetwork(network, device, config);
     
@@ -351,39 +364,44 @@ int main(){
     */
     //std::this_thread::sleep_for(timespan);
     while(cap.read(frame)){
-        cv::imshow("frame", frame);
+        //cv::imshow("frame", frame);
+        cv::resize(frame, frame, cv::Size(), input_width/frame.cols, input_height/frame.rows);
+        //std::cout << frame.rows << " " << frame.cols << std::endl;
         int key = cv::waitKey(1);
 		if(key == 'q'){
 			cv::destroyWindow("frame");
 			break;
         }
-        std::cout << "call" << std::endl;
+        //std::cout << "call" << std::endl;
         PrepareInput(infer_request, input_info, frame);
         Infer(infer_request);
-        
         //result = ProcessOutput(async_infer_request, output_name);
-        cv::putText(frame, "test", cv::Point2f(0, 20), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 255));
-        /*
-        const float *detections = infer_request->GetBlob(output_name)->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
-        //TODO class classification
-        for (int i = 0; i < numDetections; i++) {
-            float confidence = detections[i * objectSize + 2];
-            float xmin = detections[i * objectSize + 3] * width;
-            float ymin = detections[i * objectSize + 4] * height;
-            float xmax = detections[i * objectSize + 5] * width;
-            float ymax = detections[i * objectSize + 6] * height;
-
-            if (confidence > threshold) {
-                std::ostringstream conf;
-                conf << std::fixed << std::setprecision(3) << confidence;
-                cv::putText(frame,
-                    conf.str(),
-                    cv::Point2f(xmin, ymin - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1,
-                    cv::Scalar(0, 0, 255));
-                cv::rectangle(frame, cv::Point2f(xmin, ymin), cv::Point2f(xmax, ymax), cv::Scalar(0, 0, 255));
+        //cv::putText(frame, "Test Frame", cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0,0,200), 2, false);
+        const float *output_concat = infer_request.GetBlob(output_names[0])->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
+        const float *output_softmax = infer_request.GetBlob(output_names[1])->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
+        
+        std::vector<int> label, xmin, xmax, ymin, ymax;
+        for(int i = 0; i < numDetections[1]; i++){
+            for(int l = 1; l < 2; l++){ //first is background
+                if(output_softmax[i * objectSizes[1] + l] > threshold){
+                    label.push_back(l);
+                    if(l == 2){
+                        cv::putText(frame, "can Frame", cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0,0,200), 2, false);
+                    }else{
+                        std::cout << i * objectSizes[1] + l << std::endl;
+                        cv::putText(frame, "cone Frame", cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0,0,200), 2, false);
+                    }
+                    xmin.push_back(std::max(0, static_cast<int>(output_concat[i * objectSizes[0]] * input_width)));
+                    ymin.push_back(std::max(0, static_cast<int>(output_concat[i * objectSizes[0] + 2] * input_width)));
+                    xmax.push_back(std::min(static_cast<int>(input_width), static_cast<int>(output_concat[i * objectSizes[0] + 1] * input_width)));
+                    ymax.push_back(std::min(static_cast<int>(input_height), static_cast<int>(output_concat[i * objectSizes[0] + 3] * input_height)));
+                    std::cout << output_softmax[i * objectSizes[1] + l] << " " <<  xmin[xmin.size() - 1] << " " << ymin[ymin.size() - 1] << " " << xmax[xmax.size() - 1] << " " << ymax[ymax.size() - 1]  << std::endl;
+                    cv::rectangle(frame, cv::Point(xmin[xmin.size() - 1],ymin[ymin.size() - 1]), cv::Point(xmax[xmax.size() - 1],ymax[ymax.size() - 1]), cv::Scalar(255,0,0), 2);
+                }
             }
         }
-        */
+        
+        
         cv::imshow("frame", frame);
     }
 }
