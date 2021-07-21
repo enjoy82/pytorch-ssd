@@ -270,13 +270,19 @@ void matU8ToBlob(const cv::Mat& orig_image, InferenceEngine::Blob::Ptr& blob, in
     }
 
     int batchOffset = batchIndex * width * height * channels;
-
+    /*
     for (size_t c = 0; c < channels; c++) {
         for (size_t  h = 0; h < height; h++) {
             for (size_t w = 0; w < width; w++) {
                 blob_data[batchOffset + c * width * height + h * width + w] =
                         resized_image.at<cv::Vec3b>(h, w)[c];
             }
+        }
+    }
+    */
+    for(int c = 0; c < channels; c++){
+        for(unsigned j = 0; j < width * height; j++){
+            blob_data[c * width * height + j] = resized_image.data[j * channels + 2 - c]; //TODO カラーチャンネルあってるか？
         }
     }
 }
