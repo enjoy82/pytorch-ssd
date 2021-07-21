@@ -51,6 +51,7 @@ bool ReadModel(const std::string &modelPath, CNNNetReader& network_reader)
         std::cout << (modelPath.substr(0, modelPath.size() - 4) + ".bin") << " " << checkFileExistence(modelPath.substr(0, modelPath.size() - 4) + ".bin") << std::endl;
         network_reader.ReadNetwork(modelPath);
         network_reader.ReadWeights(modelPath.substr(0, modelPath.size() - 4) + ".bin");
+        network_reader.getNetwork().setBatchSize(1);
     }
     catch (const std::exception & ex)
     {
@@ -149,32 +150,7 @@ bool CreateInferRequest(ExecutableNetwork& executable_network, InferRequest::Ptr
 
     return ret;
 }
-/*
-template <typename T>
-void matU8ToBlob(const cv::Mat& orig_image, InferenceEngine::Blob::Ptr& blob, int batchIndex = 0)
-{
-    InferenceEngine::SizeVector blobSize = blob->getTensorDesc().getDims();
-    const size_t width = blobSize[3];
-    const size_t height = blobSize[2];
-    const size_t channels = blobSize[1];
-    T* blob_data = blob->buffer().as<T*>();
 
-    cv::Mat resized_image(orig_image);
-    if (width != orig_image.size().width || height != orig_image.size().height) {
-        cv::resize(orig_image, resized_image, cv::Size(width, height));
-    }
-
-    int batchOffset = batchIndex * width * height * channels;
-
-    for (size_t c = 0; c < channels; c++) {
-        for (size_t h = 0; h < height; h++) {
-            for (size_t w = 0; w < width; w++) {
-                blob_data[batchOffset + c * width * height + h * width + w] = resized_image.at<cv::Vec3b>(h, w)[c];
-            }
-        }
-    }
-}
-*/
 InferenceEngine::Blob::Ptr wrapMat2Blob(const cv::Mat &mat) {
     size_t channels = mat.channels();
     size_t height = mat.size().height;
@@ -268,6 +244,13 @@ int ProcessOutput(InferenceEngine::InferRequest & infer_request, const std::stri
 template <typename T>
 void matU8ToBlob(const cv::Mat& orig_image, InferenceEngine::Blob::Ptr& blob, int batchIndex = 0) {
     InferenceEngine::SizeVector blobSize = blob->getTensorDesc().getDims();
+    /*
+    std::cout << "input blob are" << std::endl;
+    for(int i = 0; i < blobSize.size(); i++){
+        std::cout << blobSize[i] << " ";
+    }
+    std::cout << std::endl;
+    */
     const size_t width = blobSize[3];
     const size_t height = blobSize[2];
     const size_t channels = blobSize[1];
@@ -305,8 +288,8 @@ int main(){
     std::string input_name;
     //std::string output_name;
     //std::string device = "GPU";
-    std::string device = "MYRIAD";
-    //std::string device = "CPU";
+    //std::string device = "MYRIAD";
+    std::string device = "CPU";
     std::string modelPath = "C:\\Users\\Naoya Yatsu\\Desktop\\code\\pytorch-ssd\\live_demo_cpp\\models\\mbv3-ssd-cornv1.xml";
     int result = 0;
 
@@ -333,6 +316,7 @@ int main(){
     std::cout << cpuDeviceName << std::endl;
     //TODO refactor
     //LoadPlugin(device, plugin);
+    
     ReadModel(modelPath, network_reader);
     auto network = network_reader.getNetwork();
     InferenceEngine::InputsDataMap input_info(network.getInputsInfo());
@@ -393,8 +377,9 @@ int main(){
 			break;
         }
         //std::cout << "call" << std::endl;
-        Blob::Ptr input_blob = infer_request.GetBlob(input_name);
-        matU8ToBlob<uint8_t>(frame, input_blob);
+        Blob::Ptr imgBlob = wrapMat2Blob(frame);
+        infer_request.SetBlob(input_name, imgBlob);
+        //matU8ToBlob<uint8_t>(frame, input_blob);
         //PrepareInput(infer_request, input_name, frame);
         Infer(infer_request);
         //result = ProcessOutput(async_infer_request, output_name);
@@ -413,13 +398,29 @@ int main(){
         auto moutputHolder2 = moutput2->rmap();
         const float *detection_soft = moutputHolder2.as<const PrecisionTrait<Precision::FP32>::value_type *>();
         
+        
         //std::vector<int> label, xmin, xmax, ymin, ymax;
+        std::vector<std::vector<int> > boxes;
+        std::vector<std::vector<float> > labels;
         for(int i = 0; i < numDetections[1]; i++){
             //std::cout << detection_bound[i * objectSizes[0]] *300 << " " << detection_bound[i * objectSizes[0] + 1] *300<< " " << detection_bound[i * objectSizes[0] + 2] *300<< " " << detection_bound[i * objectSizes[0] + 3] *300<< std::endl;
             //std::cout << detection_soft[i * objectSizes[1]] << " " << detection_soft[i * objectSizes[1] + 1] << " " << detection_soft[i * objectSizes[1] + 2] << std::endl;
             //cv::rectangle(frame, cv::Point(static_cast<int>(detection_bound[i * objectSizes[0]] *300),static_cast<int>(detection_bound[i * objectSizes[0] + 1] *300)), cv::Point(static_cast<int>(detection_bound[i * objectSizes[0] + 2] *300),static_cast<int>(detection_bound[i * objectSizes[0] + 3] *300)), cv::Scalar(255,0,0), 2);
-            
-            for(int l = 1; l < 3; l++){ //first is background
+            std::vector<int> box;
+            for(int l = 0; l < objectSizes[0]; l++){ //concat
+                
+                int mid = static_cast<int>(detection_bound[i * objectSizes[0] + l] * 300);
+                box.push_back(mid);
+            }
+            boxes.push_back(box);
+            std::vector<float> label;
+            for(int l = 0; l < objectSizes[1]; l++){ //softmax
+                int mid = detection_soft[i * objectSizes[1] + l];
+                label.push_back(mid);
+            }
+            labels.push_back(label);
+            /*
+            for(int l = 1; l < 2; l++){ //first is background
                 if(detection_soft[i * objectSizes[1] + l] > threshold){
                     //label.push_back(l);
                     if(l == 2){
@@ -451,6 +452,7 @@ int main(){
                     cv::rectangle(frame, cv::Point(xmin,ymin), cv::Point(xmax,ymax), cv::Scalar(255,0,0), 2);
                 }
             }
+            */
         }
         
         cv::imshow("frame", frame);
