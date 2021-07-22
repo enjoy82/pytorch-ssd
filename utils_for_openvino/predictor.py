@@ -34,6 +34,13 @@ class Predictor:
         picked_box_probs = []
         picked_labels = []
         for class_index in range(1, len(scores[1])):
+
+            for ind, box in enumerate(boxes):
+                if scores[ind][class_index] > self.iou_threshold:
+                    picked_box_probs.append(box)
+                    picked_labels.append(class_index)
+
+            """
             probs = scores[:, class_index]
             mask = probs > prob_threshold
             probs = probs[mask]
@@ -50,11 +57,12 @@ class Predictor:
                                       candidate_size=self.candidate_size)
             picked_box_probs.append(box_probs)
             picked_labels.extend([class_index] * len(box_probs))
+            """
         if not picked_box_probs:
             return [], [], []
-        picked_box_probs = np.concatenate(picked_box_probs)
+        #picked_box_probs = np.concatenate(picked_box_probs)
         picked_box_probs[:, 0] *= width
         picked_box_probs[:, 1] *= height
         picked_box_probs[:, 2] *= width
         picked_box_probs[:, 3] *= height
-        return picked_box_probs[:, :4], picked_labels, picked_box_probs[:, 4]
+        return picked_box_probs[:, :4], picked_labels #, picked_box_probs[:, 4]

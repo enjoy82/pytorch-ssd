@@ -307,7 +307,7 @@ int main(){
     double height = 240.0;
     double input_width = 300.0;
     double input_height = 300.0;
-    float threshold = 0.5;
+    float threshold = 0.7;
     cv::VideoCapture cap(cv::CAP_DSHOW + camera_id);
     if(!cap.isOpened()){ //エラー処理
 		 std::cout << "cap error" << std::endl;
@@ -425,8 +425,8 @@ int main(){
                 label.push_back(mid);
             }
             labels.push_back(label);
-            /*
-            for(int l = 1; l < 2; l++){ //first is background
+            
+            for(int l = 2; l < 3; l++){ //first is background
                 if(detection_soft[i * objectSizes[1] + l] > threshold){
                     //label.push_back(l);
                     if(l == 2){
@@ -445,9 +445,11 @@ int main(){
                     if(xmax < 0 && ymax < 0){
                         continue;
                     }
+                    /*
                     if(xmin > xmax || ymin > ymax){
                         continue;
                     }
+                    */
                     //xmin.push_back(std::max(0, static_cast<int>(detection_bound[i * objectSizes[0]] * input_width)));
                     //ymin.push_back(std::max(0, static_cast<int>(detection_bound[i * objectSizes[0] + 2] * input_width)));
                     //xmax.push_back(std::min(static_cast<int>(input_width), static_cast<int>(detection_bound[i * objectSizes[0] + 1] * input_width)));
@@ -458,7 +460,7 @@ int main(){
                     cv::rectangle(frame, cv::Point(xmin,ymin), cv::Point(xmax,ymax), cv::Scalar(255,0,0), 2);
                 }
             }
-            */
+            
         }
         
         cv::imshow("frame", frame);

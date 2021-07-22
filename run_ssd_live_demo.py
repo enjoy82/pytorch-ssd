@@ -61,7 +61,8 @@ while True:
         continue
     frame = cv2.resize(frame, (300, 300))
     #print(frame.shape)
-    boxes, labels, probs = predictor.predict(frame,10, 0.4) #TODO 閾値
+    #boxes, labels, probs = predictor.predict(frame,10, 0.4) #TODO 閾値
+    boxes, labels = predictor.predict(frame,10, 0.4) #TODO 閾値
     # 出力から必要なデータのみ取り出し 
 
     boxed = [] #重複box
@@ -79,7 +80,7 @@ while True:
             continue
         boxed.append(box)
 
-        label = class_names[labels[i]] + str(probs[i])
+        label = class_names[labels[i]] #+ str(probs[i])
         cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 4)
         cv2.putText(frame, label,
                     (int(box[0]) + 20, int(box[1]) + 40),
