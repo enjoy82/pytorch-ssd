@@ -12,7 +12,7 @@ from openvino.inference_engine import IENetwork, IEPlugin
 #windowheight = 240
 image_size = 300
 nms_method = "hard"
-label_path = "./models/gakuv2/open-images-model-labels.txt"
+label_path = "./models/forasp/open-images-model-labels.txt"
 class_names = [name.strip() for name in open(label_path).readlines()]
 
 
@@ -61,8 +61,7 @@ while True:
         continue
     frame = cv2.resize(frame, (300, 300))
     #print(frame.shape)
-    #boxes, labels, probs = predictor.predict(frame,10, 0.4) #TODO 閾値
-    boxes, labels = predictor.predict(frame,10, 0.4) #TODO 閾値
+    boxes, labels, probs = predictor.predict(frame,10, 0.4) #TODO 閾値
     # 出力から必要なデータのみ取り出し 
 
     boxed = [] #重複box
