@@ -155,7 +155,6 @@ InferenceEngine::Blob::Ptr wrapMat2Blob(const cv::Mat &mat) {
     size_t channels = mat.channels();
     size_t height = mat.size().height;
     size_t width = mat.size().width;
-
     size_t strideH = mat.step.buf[0];
     size_t strideW = mat.step.buf[1];
 
@@ -270,7 +269,7 @@ void matU8ToBlob(const cv::Mat& orig_image, InferenceEngine::Blob::Ptr& blob, in
     }
 
     int batchOffset = batchIndex * width * height * channels;
-    /*
+    
     for (size_t c = 0; c < channels; c++) {
         for (size_t  h = 0; h < height; h++) {
             for (size_t w = 0; w < width; w++) {
@@ -279,12 +278,14 @@ void matU8ToBlob(const cv::Mat& orig_image, InferenceEngine::Blob::Ptr& blob, in
             }
         }
     }
-    */
+    /*
     for(int c = 0; c < channels; c++){
         for(unsigned j = 0; j < width * height; j++){
-            blob_data[c * width * height + j] = resized_image.data[j * channels + 2 - c]; //TODO カラーチャンネルあってるか？
+            blob_data[c * width * height + j] = resized_image.data[j * channels + c]; //TODO カラーチャンネルあってるか？
+            //blob_data[c * width * height + j] = resized_image.data[c * width * height + j];
         }
     }
+    */
 }
 
 //TODO refactor
@@ -292,14 +293,21 @@ int main(){
     InferenceEngine::Core core;
     CNNNetReader network_reader;
     std::string input_name;
-    //std::string output_name;
     //std::string device = "GPU";
-    //std::string device = "MYRIAD";
-    std::string device = "CPU";
+    std::string device = "MYRIAD";
+    //std::string device = "CPU";
     std::string modelPath = "C:\\Users\\Naoya Yatsu\\Desktop\\code\\pytorch-ssd\\live_demo_cpp\\models\\mbv3-ssd-cornv1.xml";
     int result = 0;
-
-
+    core.SetConfig({{ CONFIG_KEY(LOG_LEVEL), CONFIG_VALUE(LOG_WARNING) }}, device);
+    /*
+    //CPU推論するときはrelu使えるようにする必要がある
+    InferenceEngine::IExtensionPtr inPlaceExtension;
+    if (device.find("CPU") != std::string::npos) {
+        inPlaceExtension = std::make_shared<InPlaceExtension>();
+        // register sample's custom kernel (CustomReLU)
+        core.AddExtension(inPlaceExtension);
+    }
+    */
     //set up camera
     int camera_id = 0;
     double fps = 30.0;
@@ -307,7 +315,7 @@ int main(){
     double height = 240.0;
     double input_width = 300.0;
     double input_height = 300.0;
-    float threshold = 0.7;
+    float threshold = 0.5;
     cv::VideoCapture cap(cv::CAP_DSHOW + camera_id);
     if(!cap.isOpened()){ //エラー処理
 		 std::cout << "cap error" << std::endl;
@@ -383,17 +391,18 @@ int main(){
 			break;
         }
         //std::cout << "call" << std::endl;
-        Blob::Ptr imgBlob = wrapMat2Blob(frame);
-        infer_request.SetBlob(input_name, imgBlob);
-        //matU8ToBlob<uint8_t>(frame, input_blob);
+        //Blob::Ptr imgBlob = wrapMat2Blob(frame);
+        //infer_request.SetBlob(input_name, imgBlob);
+        Blob::Ptr input_blob = infer_request.GetBlob(input_name);
+        matU8ToBlob<uint8_t>(frame, input_blob);
         //PrepareInput(infer_request, input_name, frame);
         Infer(infer_request);
         //result = ProcessOutput(async_infer_request, output_name);
         //cv::putText(frame, "Test Frame", cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0,0,200), 2, false);
+        
+        float *output_concat = infer_request.GetBlob(output_names[0])->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
+        float *output_softmax = infer_request.GetBlob(output_names[1])->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
         /*
-        const float *output_concat = infer_request.GetBlob(output_names[0])->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
-        const float *output_softmax = infer_request.GetBlob(output_names[1])->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
-        */
         auto output_concat = infer_request.GetBlob(output_names[0]);
         MemoryBlob::CPtr moutput1 = as<MemoryBlob>(output_concat);
         auto moutputHolder1 = moutput1->rmap();
@@ -403,66 +412,55 @@ int main(){
         MemoryBlob::CPtr moutput2 = as<MemoryBlob>(output_softmax);
         auto moutputHolder2 = moutput2->rmap();
         const float *detection_soft = moutputHolder2.as<const PrecisionTrait<Precision::FP32>::value_type *>();
-        
+        */
         
         //std::vector<int> label, xmin, xmax, ymin, ymax;
         std::vector<std::vector<int> > boxes;
         std::vector<std::vector<float> > labels;
-        for(int i = 0; i < numDetections[1]; i++){
+
+        for(size_t i = 0; i < numDetections[1]; i++){
             //std::cout << detection_bound[i * objectSizes[0]] *300 << " " << detection_bound[i * objectSizes[0] + 1] *300<< " " << detection_bound[i * objectSizes[0] + 2] *300<< " " << detection_bound[i * objectSizes[0] + 3] *300<< std::endl;
             //std::cout << detection_soft[i * objectSizes[1]] << " " << detection_soft[i * objectSizes[1] + 1] << " " << detection_soft[i * objectSizes[1] + 2] << std::endl;
             //cv::rectangle(frame, cv::Point(static_cast<int>(detection_bound[i * objectSizes[0]] *300),static_cast<int>(detection_bound[i * objectSizes[0] + 1] *300)), cv::Point(static_cast<int>(detection_bound[i * objectSizes[0] + 2] *300),static_cast<int>(detection_bound[i * objectSizes[0] + 3] *300)), cv::Scalar(255,0,0), 2);
             std::vector<int> box;
             for(int l = 0; l < objectSizes[0]; l++){ //concat
-                
-                int mid = static_cast<int>(detection_bound[i * objectSizes[0] + l] * 300);
+                int mid = static_cast<int>(output_concat[i * objectSizes[0] + l] * 300);
+                if(output_concat[i * objectSizes[0] + l] > 2 && (i * objectSizes[0] + l) < 9000)
+                    std::cout << i * objectSizes[0] + l << " " <<  output_concat[i * objectSizes[0] + l]  << std::endl;
                 box.push_back(mid);
             }
             boxes.push_back(box);
             std::vector<float> label;
             for(int l = 0; l < objectSizes[1]; l++){ //softmax
-                int mid = detection_soft[i * objectSizes[1] + l];
+                float mid = output_softmax[i * objectSizes[1] + l];
                 label.push_back(mid);
             }
-            labels.push_back(label);
-            
-            for(int l = 2; l < 3; l++){ //first is background
-                if(detection_soft[i * objectSizes[1] + l] > threshold){
-                    //label.push_back(l);
-                    if(l == 2){
-                        cv::putText(frame, "can Frame", cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0,0,200), 2, false);
-                    }else{
-                        //std::cout << i * objectSizes[1] + l << std::endl;
-                        cv::putText(frame, "cone Frame", cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0,0,200), 2, false);
-                    }
-                    int xmin = std::max(0, static_cast<int>(detection_bound[i * objectSizes[0]] * 300));
-                    int ymin = std::max(0, static_cast<int>(detection_bound[i * objectSizes[0] + 1] * 300));
-                    if(xmin > 300 || ymin > 300){
-                        continue;
-                    }
-                    int xmax = std::min(300, static_cast<int>(detection_bound[i * objectSizes[0] + 2] * 300));
-                    int ymax = std::min(300, static_cast<int>(detection_bound[i * objectSizes[0] + 3] * 300));
-                    if(xmax < 0 && ymax < 0){
-                        continue;
-                    }
+            labels.push_back(label);            
+        }
+        
+        for(size_t i = 0; i < numDetections[1]; i++){
+            for(int l = 1; l < 2; l++){
+                if(labels[i][l] > threshold){
                     /*
-                    if(xmin > xmax || ymin > ymax){
+                    if(boxes[i][3] < 0 || boxes[i][2] < 0){
                         continue;
                     }
                     */
-                    //xmin.push_back(std::max(0, static_cast<int>(detection_bound[i * objectSizes[0]] * input_width)));
-                    //ymin.push_back(std::max(0, static_cast<int>(detection_bound[i * objectSizes[0] + 2] * input_width)));
-                    //xmax.push_back(std::min(static_cast<int>(input_width), static_cast<int>(detection_bound[i * objectSizes[0] + 1] * input_width)));
-                    //ymax.push_back(std::min(static_cast<int>(input_height), static_cast<int>(detection_bound[i * objectSizes[0] + 3] * input_height)));
-                    //std::cout << detection_bound[i * objectSizes[0]] << " " << detection_bound[i * objectSizes[0] + 1] << " " << detection_bound[i * objectSizes[0] + 2] << " " << detection_bound[i * objectSizes[0] + 3] << std::endl;
-                    //std::cout << i * objectSizes[0] << " " << i * objectSizes[0] + 1 << " " << i * objectSizes[0] + 2 << " " << i * objectSizes[0] + 3 << std::endl;
-                    //std::cout << output_softmax[i * objectSizes[1] + l] << " " <<  xmin[xmin.size() - 1] << " " << ymin[ymin.size() - 1] << " " << xmax[xmax.size() - 1] << " " << ymax[ymax.size() - 1]  << std::endl;
+                    std::cout << labels[i][l] << std::endl;
+                    int xmin = std::max(0, boxes[i][0]);
+                    int ymin = std::max(0, boxes[i][1]);
+                    int xmax = std::min(300, boxes[i][2]);
+                    int ymax = std::min(300, boxes[i][3]);
+                    
+                    //if(xmin > 300 || ymin > 300 || xmax < 0 || ymax < 0)
+                        //std::cout << xmin << " " << ymin << " " << xmax << " " << ymax << std::endl;
+                    
                     cv::rectangle(frame, cv::Point(xmin,ymin), cv::Point(xmax,ymax), cv::Scalar(255,0,0), 2);
                 }
             }
-            
         }
         
+        //break;
         cv::imshow("frame", frame);
     }
 }
