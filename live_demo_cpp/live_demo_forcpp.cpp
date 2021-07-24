@@ -89,7 +89,7 @@ bool ConfigureInput(CNNNetwork& network, InputsDataMap& input_info, std::string&
     return ret;
 }
 
-bool ConfigureOutput(CNNNetwork& network, OutputsDataMap& output_info, std::string& output_name, const Precision precision, const Layout layout)
+bool ConfigureOutput(CNNNetwork& network, OutputsDataMap& output_info, const Precision precision, const Layout layout)
 {
     bool ret = true;
     
@@ -101,7 +101,6 @@ bool ConfigureOutput(CNNNetwork& network, OutputsDataMap& output_info, std::stri
 
         for (auto&& output : output_info)
         {
-            output_name = output.first;
             output.second->setPrecision(precision);
             std::cout << "setPrecision end" << std::endl;
             //ここ死んでる
@@ -285,7 +284,7 @@ int main(){
         return 0;
     }
     std::cout << "configure input end" << std::endl;
-    if(ConfigureOutput(network, output_info, output_name, Precision::FP32, Layout::CHW) == -1){
+    if(ConfigureOutput(network, output_info, Precision::FP32, Layout::CHW) == -1){
         std::cout << "ConfigureOutput error!" << std::endl;
         return 0;
     }
@@ -308,8 +307,6 @@ int main(){
     for (auto &item : output_info) {
         output_names.push_back(item.first);
         auto output_data = item.second;
-        output_data->setPrecision(Precision::FP32);
-        output_data->setLayout(Layout::CHW);
         const SizeVector outputDims = output_data->getTensorDesc().getDims();
         numDetections.push_back(outputDims[1]);
         objectSizes.push_back(outputDims[2]);

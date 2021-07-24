@@ -332,7 +332,7 @@ int main(){
     //LoadPlugin(device, plugin);
     
     ReadModel(modelPath, network_reader);
-    auto network = network_reader.getNetwork();
+    InferenceEngine::CNNNetwork network = network_reader.getNetwork();
     std::cout << typeid(network).name() << std::endl;
     InferenceEngine::InputsDataMap input_info(network.getInputsInfo());
     InferenceEngine::OutputsDataMap output_info(network.getOutputsInfo());
