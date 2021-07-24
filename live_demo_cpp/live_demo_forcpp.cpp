@@ -280,13 +280,25 @@ int main(){
     //TODO refactor
     LoadPlugin(device, plugin);
     ReadModel(modelPath, network);
-    ConfigureInput(network, input_info, input_name, Precision::U8, Layout::NCHW);
+    if(ConfigureInput(network, input_info, input_name, Precision::U8, Layout::NCHW) == -1){
+        std::cout << "ConfigureInput error!" << std::endl;
+        return;
+    }
     std::cout << "configure input end" << std::endl;
-    ConfigureOutput(network, output_info, output_name, Precision::FP32, Layout::CHW);
+    if(ConfigureOutput(network, output_info, output_name, Precision::FP32, Layout::CHW) == -1){
+        std::cout << "ConfigureOutput error!" << std::endl;
+        return;
+    }
     std::cout << "configure output end" << std::endl;
-    LoadModel(network, plugin, executable_network);
+    if(LoadModel(network, plugin, executable_network) == -1){
+        std::cout << "LoadModel error!" << std::endl;
+        return;
+    }
     std::cout << "LoadModel end" << std::endl;
-    CreateInferRequest(executable_network, async_infer_request);
+    if(CreateInferRequest(executable_network, async_infer_request) == -1){
+        std::cout << "CreateInferRequest error!" << std::endl;
+        return;
+    }
     std::cout << "CreateInferRequest end" << std::endl;
     DataPtr& output = output_info.begin()->second;
     const SizeVector outputDims = output->getTensorDesc().getDims();
