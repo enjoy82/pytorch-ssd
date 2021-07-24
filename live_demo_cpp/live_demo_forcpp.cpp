@@ -330,8 +330,8 @@ int main(){
         Infer(async_infer_request);
         //result = ProcessOutput(async_infer_request, output_name);
         cv::putText(frame, "test", cv::Point2f(0, 20), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 255));
-        const float *output_concat = async_infer_request->GetBlob(output_name[0])->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
-        const float *output_softmax = async_infer_request->GetBlob(output_name[0])->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
+        const float *output_concat = async_infer_request->GetBlob(output_names[0])->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
+        const float *output_softmax = async_infer_request->GetBlob(output_names[0])->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
         
         std::vector<std::vector<int> > boxes;
         std::vector<std::vector<float> > labels;
