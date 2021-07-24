@@ -30,7 +30,7 @@ bool LoadPlugin(const std::string& device, InferencePlugin& plugin)
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         std::cout << "LoadPlugin error" << std::endl;
         ret = false;
     }
@@ -55,7 +55,7 @@ bool ReadModel(const std::string &modelPath, CNNNetReader& network_reader)
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         std::cout << "ReadModel error" << std::endl;
         ret = false;
     }
@@ -109,7 +109,7 @@ bool ConfigureOutput(CNNNetwork& network, OutputsDataMap& output_info, std::stri
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         std::cout << "ConfigureOutput error" << std::endl;
         ret = false;
     }
@@ -127,7 +127,7 @@ bool LoadModel(CNNNetwork& network, InferencePlugin& plugin, ExecutableNetwork& 
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         ret = false;
     }
 
@@ -144,7 +144,7 @@ bool CreateInferRequest(ExecutableNetwork& executable_network, InferRequest::Ptr
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         ret = false;
     }
 
@@ -181,7 +181,7 @@ bool PrepareInput(InferenceEngine::InferRequest & infer_request, std::string & i
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         std::cout << "PrepareInput error!" << std::endl;
         ret = false;
     }
@@ -201,7 +201,7 @@ bool Infer(InferenceEngine::InferRequest & infer_request)
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         std::cout << "Infer error!" << std::endl;
         ret = false;
     }
@@ -296,7 +296,7 @@ int main(){
     //std::string device = "GPU";
     std::string device = "MYRIAD";
     //std::string device = "CPU";
-    std::string modelPath = "C:\\Users\\Naoya Yatsu\\Desktop\\code\\pytorch-ssd\\live_demo_cpp\\models\\mbv3-ssd-cornv1.xml";
+    std::string modelPath = "/home/pi/pytorch-ssd/live_demo_cpp/models/mbv3-ssd-cornv1.xml";
     int result = 0;
     core.SetConfig({{ CONFIG_KEY(LOG_LEVEL), CONFIG_VALUE(LOG_WARNING) }}, device);
     /*
@@ -316,7 +316,7 @@ int main(){
     double input_width = 300.0;
     double input_height = 300.0;
     float threshold = 0.5;
-    cv::VideoCapture cap(cv::CAP_DSHOW + camera_id);
+    cv::VideoCapture cap(0);
     if(!cap.isOpened()){ //エラー処理
 		 std::cout << "cap error" << std::endl;
 		 return -1;
@@ -333,6 +333,7 @@ int main(){
     
     ReadModel(modelPath, network_reader);
     auto network = network_reader.getNetwork();
+    std::cout << typeid(network).name() << std::endl;
     InferenceEngine::InputsDataMap input_info(network.getInputsInfo());
     InferenceEngine::OutputsDataMap output_info(network.getOutputsInfo());
     //ConfigureInput(network, input_info, input_name, Precision::U8, Layout::NCHW);

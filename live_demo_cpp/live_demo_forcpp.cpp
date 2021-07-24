@@ -30,7 +30,7 @@ bool LoadPlugin(const std::string& device, InferencePlugin& plugin)
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         std::cout << "LoadPlugin error" << std::endl;
         ret = false;
     }
@@ -57,7 +57,7 @@ bool ReadModel(const std::string &modelPath, CNNNetwork& network)
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         std::cout << "ReadModel error" << std::endl;
         ret = false;
     }
@@ -81,7 +81,7 @@ bool ConfigureInput(CNNNetwork& network, InputsDataMap& input_info, std::string&
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         std::cout << "ConfigureInput error" << std::endl;
         ret = false;
     }
@@ -111,7 +111,7 @@ bool ConfigureOutput(CNNNetwork& network, OutputsDataMap& output_info, std::stri
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         std::cout << "ConfigureOutput error" << std::endl;
         ret = false;
     }
@@ -130,7 +130,7 @@ bool LoadModel(CNNNetwork& network, InferencePlugin& plugin, ExecutableNetwork& 
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         std::cout << "LoadModel error" << std::endl;
         ret = false;
     }
@@ -148,7 +148,7 @@ bool CreateInferRequest(ExecutableNetwork& executable_network, InferRequest::Ptr
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         ret = false;
     }
 
@@ -191,7 +191,7 @@ bool PrepareInput(InferRequest::Ptr& async_infer_request, const std::string & in
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         ret = false;
     }
 
@@ -209,7 +209,7 @@ bool Infer(InferRequest::Ptr& async_infer_request)
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         ret = false;
     }
 
@@ -238,7 +238,7 @@ int ProcessOutput(InferRequest::Ptr& async_infer_request, const std::string& out
     }
     catch (const std::exception & ex)
     {
-        OutputDebugStringA(ex.what());
+        //OutputDebugStringA(ex.what());
         result = -1;
     }
 
@@ -257,7 +257,7 @@ int main(){
     std::string output_name;
     //std::string device = "GPU";
     std::string device = "MYRIAD";
-    std::string modelPath = "C:\\Users\\Naoya Yatsu\\Desktop\\code\\pytorch-ssd\\live_demo_cpp\\models\\mbv3-ssd-cornv1.xml";
+    std::string modelPath = "/home/pi/pytorch-ssd/models/forasp/mbv3-ssd-cornv1.xml";
     int result = 0;
 
 
@@ -267,7 +267,7 @@ int main(){
     double width = 640.0;
     double height = 480.0;
     float threshold = 0.5;
-    cv::VideoCapture cap(cv::CAP_DSHOW + camera_id);
+    cv::VideoCapture cap(camera_id);
     if(!cap.isOpened()){ //エラー処理
 		 std::cout << "cap error" << std::endl;
 		 return -1;

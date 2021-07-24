@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(run CXX)
 
-add_executable(run live_demo_forcpp2.cpp)
+add_executable(run live_demo_forcpp.cpp)
 find_package(InferenceEngine 2.1 REQUIRED)
 find_package(OpenCV REQUIRED)
 
