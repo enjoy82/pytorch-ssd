@@ -282,29 +282,42 @@ int main(){
     ReadModel(modelPath, network);
     if(ConfigureInput(network, input_info, input_name, Precision::U8, Layout::NCHW) == -1){
         std::cout << "ConfigureInput error!" << std::endl;
-        return;
+        return 0;
     }
     std::cout << "configure input end" << std::endl;
     if(ConfigureOutput(network, output_info, output_name, Precision::FP32, Layout::CHW) == -1){
         std::cout << "ConfigureOutput error!" << std::endl;
-        return;
+        return 0;
     }
     std::cout << "configure output end" << std::endl;
     if(LoadModel(network, plugin, executable_network) == -1){
         std::cout << "LoadModel error!" << std::endl;
-        return;
+        return 0;
     }
     std::cout << "LoadModel end" << std::endl;
     if(CreateInferRequest(executable_network, async_infer_request) == -1){
         std::cout << "CreateInferRequest error!" << std::endl;
-        return;
+        return 0;
     }
     std::cout << "CreateInferRequest end" << std::endl;
-    DataPtr& output = output_info.begin()->second;
-    const SizeVector outputDims = output->getTensorDesc().getDims();
-    const int numDetections = outputDims[2];
-    const int objectSize = outputDims[3];
 
+    //get output information
+    std::vector<std::string> output_names; //first is concat, second is softmax
+    std::vector<int> numDetections;
+    std::vector<int> objectSizes;
+    for (auto &item : output_info) {
+        output_names.push_back(item.first);
+        auto output_data = item.second;
+        output_data->setPrecision(Precision::FP32);
+        output_data->setLayout(Layout::CHW);
+        const SizeVector outputDims = output_data->getTensorDesc().getDims();
+        numDetections.push_back(outputDims[1]);
+        objectSizes.push_back(outputDims[2]);
+    }
+    for(int i = 0; i < output_names.size(); i++){
+        std::cout << output_names[i] << " " << numDetections[i] << " " << objectSizes[i] << std::endl;
+    }
+    
     while(cap.read(frame)){
         cv::imshow("frame", frame);
         int key = cv::waitKey(1);
@@ -317,26 +330,54 @@ int main(){
         Infer(async_infer_request);
         //result = ProcessOutput(async_infer_request, output_name);
         cv::putText(frame, "test", cv::Point2f(0, 20), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 255));
-        const float *detections = async_infer_request->GetBlob(output_name)->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
-        //TODO class classification
-        for (int i = 0; i < numDetections; i++) {
-            float confidence = detections[i * objectSize + 2];
-            float xmin = detections[i * objectSize + 3] * width;
-            float ymin = detections[i * objectSize + 4] * height;
-            float xmax = detections[i * objectSize + 5] * width;
-            float ymax = detections[i * objectSize + 6] * height;
+        const float *output_concat = async_infer_request->GetBlob(output_name[0])->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
+        const float *output_softmax = async_infer_request->GetBlob(output_name[0])->buffer().as<PrecisionTrait<Precision::FP32>::value_type*>();
+        
+        std::vector<std::vector<int> > boxes;
+        std::vector<std::vector<float> > labels;
 
-            if (confidence > threshold) {
-                std::ostringstream conf;
-                conf << std::fixed << std::setprecision(3) << confidence;
-                cv::putText(frame,
-                    conf.str(),
-                    cv::Point2f(xmin, ymin - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1,
-                    cv::Scalar(0, 0, 255));
-                cv::rectangle(frame, cv::Point2f(xmin, ymin), cv::Point2f(xmax, ymax), cv::Scalar(0, 0, 255));
+        for(size_t i = 0; i < numDetections[1]; i++){
+            //std::cout << detection_bound[i * objectSizes[0]] *300 << " " << detection_bound[i * objectSizes[0] + 1] *300<< " " << detection_bound[i * objectSizes[0] + 2] *300<< " " << detection_bound[i * objectSizes[0] + 3] *300<< std::endl;
+            //std::cout << detection_soft[i * objectSizes[1]] << " " << detection_soft[i * objectSizes[1] + 1] << " " << detection_soft[i * objectSizes[1] + 2] << std::endl;
+            //cv::rectangle(frame, cv::Point(static_cast<int>(detection_bound[i * objectSizes[0]] *300),static_cast<int>(detection_bound[i * objectSizes[0] + 1] *300)), cv::Point(static_cast<int>(detection_bound[i * objectSizes[0] + 2] *300),static_cast<int>(detection_bound[i * objectSizes[0] + 3] *300)), cv::Scalar(255,0,0), 2);
+            std::vector<int> box;
+            for(int l = 0; l < objectSizes[0]; l++){ //concat
+                int mid = static_cast<int>(output_concat[i * objectSizes[0] + l] * 300);
+                if(output_concat[i * objectSizes[0] + l] > 2 && (i * objectSizes[0] + l) < 9000)
+                    std::cout << i * objectSizes[0] + l << " " <<  output_concat[i * objectSizes[0] + l]  << std::endl;
+                box.push_back(mid);
+            }
+            boxes.push_back(box);
+            std::vector<float> label;
+            for(int l = 0; l < objectSizes[1]; l++){ //softmax
+                float mid = output_softmax[i * objectSizes[1] + l];
+                label.push_back(mid);
+            }
+            labels.push_back(label);            
+        }
+        
+        for(size_t i = 0; i < numDetections[1]; i++){
+            for(int l = 1; l < 2; l++){
+                if(labels[i][l] > threshold){
+                    /*
+                    if(boxes[i][3] < 0 || boxes[i][2] < 0){
+                        continue;
+                    }
+                    */
+                    std::cout << labels[i][l] << std::endl;
+                    int xmin = std::max(0, boxes[i][0]);
+                    int ymin = std::max(0, boxes[i][1]);
+                    int xmax = std::min(300, boxes[i][2]);
+                    int ymax = std::min(300, boxes[i][3]);
+                    
+                    //if(xmin > 300 || ymin > 300 || xmax < 0 || ymax < 0)
+                        //std::cout << xmin << " " << ymin << " " << xmax << " " << ymax << std::endl;
+                    
+                    cv::rectangle(frame, cv::Point(xmin,ymin), cv::Point(xmax,ymax), cv::Scalar(255,0,0), 2);
+                }
             }
         }
 
-        cv::imshow("object Detector", frame);
+        cv::imshow("frame", frame);
     }
 }
