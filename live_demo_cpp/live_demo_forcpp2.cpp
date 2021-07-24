@@ -291,12 +291,13 @@ void matU8ToBlob(const cv::Mat& orig_image, InferenceEngine::Blob::Ptr& blob, in
 //TODO refactor
 int main(){
     InferenceEngine::Core core;
-    CNNNetReader network_reader;
+    //CNNNetReader network_reader;
     std::string input_name;
     //std::string device = "GPU";
     std::string device = "MYRIAD";
     //std::string device = "CPU";
     std::string modelPath = "/home/pi/pytorch-ssd/live_demo_cpp/models/mbv3-ssd-cornv1.xml";
+    std::string binPath = "/home/pi/pytorch-ssd/live_demo_cpp/models/mbv3-ssd-cornv1.bin";
     int result = 0;
     core.SetConfig({{ CONFIG_KEY(LOG_LEVEL), CONFIG_VALUE(LOG_WARNING) }}, device);
     /*
@@ -331,8 +332,9 @@ int main(){
     //TODO refactor
     //LoadPlugin(device, plugin);
     
-    ReadModel(modelPath, network_reader);
-    InferenceEngine::CNNNetwork network = network_reader.getNetwork();
+    //ReadModel(modelPath, network_reader);
+    //InferenceEngine::CNNNetwork network = network_reader.getNetwork();
+    auto network = core.ReadNetwork(modelPath, binPath)
     std::cout << typeid(network).name() << std::endl;
     InferenceEngine::InputsDataMap input_info(network.getInputsInfo());
     InferenceEngine::OutputsDataMap output_info(network.getOutputsInfo());
@@ -392,10 +394,10 @@ int main(){
 			break;
         }
         //std::cout << "call" << std::endl;
-        //Blob::Ptr imgBlob = wrapMat2Blob(frame);
-        //infer_request.SetBlob(input_name, imgBlob);
-        Blob::Ptr input_blob = infer_request.GetBlob(input_name);
-        matU8ToBlob<uint8_t>(frame, input_blob);
+        Blob::Ptr imgBlob = wrapMat2Blob(frame);
+        infer_request.SetBlob(input_name, imgBlob);
+        //Blob::Ptr input_blob = infer_request.GetBlob(input_name);
+        //matU8ToBlob<uint8_t>(frame, input_blob);
         //PrepareInput(infer_request, input_name, frame);
         Infer(infer_request);
         //result = ProcessOutput(async_infer_request, output_name);
