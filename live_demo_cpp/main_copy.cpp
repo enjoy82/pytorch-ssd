@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
             /** Creating first input blob **/
             Precision inputPrecision = Precision::U8;
             item.second->setPrecision(inputPrecision);
-            item.second->setPrecision(Layout::NCHW);
+            item.second->setLayout(Layout::NCHW);
         } else if (item.second->getInputData()->getTensorDesc().getDims().size() == 2) {
             imInfoInputName = item.first;
 
