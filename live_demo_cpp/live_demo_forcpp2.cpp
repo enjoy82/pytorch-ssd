@@ -39,118 +39,6 @@ bool LoadPlugin(const std::string& device, InferencePlugin& plugin)
 }
 
 
-bool ReadModel(const std::string &modelPath, CNNNetReader& network_reader)
-{
-    bool ret = true;
-
-    try
-    {
-        //std::cout << checkFileExistence(modelPath) << std::endl;
-        //std::cout << checkFileExistence(modelPath.substr(0, modelPath.size() - 4) + ".bin") << std::endl;
-        std::cout << modelPath << " " << checkFileExistence(modelPath)  << std::endl;
-        std::cout << (modelPath.substr(0, modelPath.size() - 4) + ".bin") << " " << checkFileExistence(modelPath.substr(0, modelPath.size() - 4) + ".bin") << std::endl;
-        network_reader.ReadNetwork(modelPath);
-        network_reader.ReadWeights(modelPath.substr(0, modelPath.size() - 4) + ".bin");
-        network_reader.getNetwork().setBatchSize(1);
-    }
-    catch (const std::exception & ex)
-    {
-        //OutputDebugStringA(ex.what());
-        std::cout << "ReadModel error" << std::endl;
-        ret = false;
-    }
-
-    return ret;
-}
-/*
-bool ConfigureInput(CNNNetwork& network, InputsDataMap& input_info, std::string& input_name, const Precision precision, const Layout layout)
-{
-    bool ret = true;
-    
-    try
-    {
-        input_info = InputsDataMap(network.getInputsInfo());
-        for (auto&& input : input_info)
-        {
-            input_name = input.first;
-            input.second->setPrecision(precision);
-            input.second->setLayout(layout);
-        }
-    }
-    catch (const std::exception & ex)
-    {
-        OutputDebugStringA(ex.what());
-        std::cout << "ConfigureInput error" << std::endl;
-        ret = false;
-    }
-
-    return ret;
-}
-*/
-bool ConfigureOutput(CNNNetwork& network, OutputsDataMap& output_info, std::string& output_name, const Precision precision, const Layout layout)
-{
-    bool ret = true;
-    
-    try
-    {
-        std::cout << "ConfigureOutput stert" << std::endl;
-        output_info = OutputsDataMap(network.getOutputsInfo());
-        std::cout << "OutputsDataMap end" << std::endl;
-
-        for (auto&& output : output_info)
-        {
-            output_name = output.first;
-            output.second->setPrecision(precision);
-            std::cout << "setPrecision end" << std::endl;
-            //ここ死んでる
-            output.second->setLayout(layout);
-            std::cout << "setLayout end" << std::endl;
-        }
-    }
-    catch (const std::exception & ex)
-    {
-        //OutputDebugStringA(ex.what());
-        std::cout << "ConfigureOutput error" << std::endl;
-        ret = false;
-    }
-
-    return ret;
-}
-
-bool LoadModel(CNNNetwork& network, InferencePlugin& plugin, ExecutableNetwork& executable_network)
-{
-    bool ret = true;
-
-    try
-    {
-        executable_network = plugin.LoadNetwork(network, {});
-    }
-    catch (const std::exception & ex)
-    {
-        //OutputDebugStringA(ex.what());
-        ret = false;
-    }
-
-    return ret;
-}
-
-bool CreateInferRequest(ExecutableNetwork& executable_network, InferRequest::Ptr& async_infer_request)
-{
-    bool ret = true;
-
-    try
-    {
-        async_infer_request = executable_network.CreateInferRequestPtr();
-    }
-    catch (const std::exception & ex)
-    {
-        //OutputDebugStringA(ex.what());
-        ret = false;
-    }
-
-    return ret;
-}
-
 InferenceEngine::Blob::Ptr wrapMat2Blob(const cv::Mat &mat) {
     size_t channels = mat.channels();
     size_t height = mat.size().height;
@@ -167,26 +55,6 @@ InferenceEngine::Blob::Ptr wrapMat2Blob(const cv::Mat &mat) {
                                       InferenceEngine::Layout::NHWC);
 
     return InferenceEngine::make_shared_blob<uint8_t>(tDesc, mat.data);
-}
-
-//やばい
-bool PrepareInput(InferenceEngine::InferRequest & infer_request, std::string & input_name, const cv::Mat & image)
-{
-    bool ret = true;
-
-    try
-    {
-        Blob::Ptr imgBlob = wrapMat2Blob(image);
-        infer_request.SetBlob(input_name, imgBlob);
-    }
-    catch (const std::exception & ex)
-    {
-        //OutputDebugStringA(ex.what());
-        std::cout << "PrepareInput error!" << std::endl;
-        ret = false;
-    }
-
-    return ret;
 }
 
 
@@ -209,36 +77,6 @@ bool Infer(InferenceEngine::InferRequest & infer_request)
     return ret;
 }
 
-//TODO 書き換え
-/*
-int ProcessOutput(InferenceEngine::InferRequest & infer_request, const std::string& output_name)
-{
-
-    int result = 0;
-    float buf= 0;
-
-    try
-    {
-        const float* oneHotVector = infer_request->GetBlob(output_name)->buffer().as<float*>();
-
-        for (int i = 0; i < 10; i++)
-        {
-            if (oneHotVector[i] > buf)
-            {
-                buf = oneHotVector[i];
-                result = i;
-            }
-        }
-    }
-    catch (const std::exception & ex)
-    {
-        OutputDebugStringA(ex.what());
-        result = -1;
-    }
-
-    return result;
-}
-*/
 
 template <typename T>
 void matU8ToBlob(const cv::Mat& orig_image, InferenceEngine::Blob::Ptr& blob, int batchIndex = 0) {
@@ -334,7 +172,7 @@ int main(){
     
     //ReadModel(modelPath, network_reader);
     //InferenceEngine::CNNNetwork network = network_reader.getNetwork();
-    auto network = core.ReadNetwork(modelPath, binPath);
+    CNNNetwork network = core.ReadNetwork(modelPath, binPath);
     std::cout << typeid(network).name() << std::endl;
     InferenceEngine::InputsDataMap input_info(network.getInputsInfo());
     InferenceEngine::OutputsDataMap output_info(network.getOutputsInfo());
@@ -363,8 +201,7 @@ int main(){
     }
     for(int i = 0; i < output_names.size(); i++){
         std::cout << output_names[i] << " " << numDetections[i] << " " << objectSizes[i] << std::endl;
-    }
-    //ConfigureOutput(network, output_info, output_name, Precision::FP32, Layout::NC);
+    }    //ConfigureOutput(network, output_info, output_name, Precision::FP32, Layout::NC);
     std::cout << "configure output end" << std::endl;
     //TODO 変更
     //std::map<std::string, std::string> config = {{ PluginConfigParams::KEY_PERF_COUNT, PluginConfigParams::YES }};
