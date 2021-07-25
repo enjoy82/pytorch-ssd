@@ -1,7 +1,5 @@
 //from https://qiita.com/fan2tamo/items/36bc8f9657d1a430aa54#8-process-output
 #include <iostream>
-#include <ie_executable_network.hpp>
-#include <ie_cnn_network.h>
 #include <opencv2/opencv.hpp>
 #include <ie_core.hpp>
 #include<fstream>
@@ -149,8 +147,8 @@ int main(){
     if (!cap.set(cv::CAP_PROP_FRAME_HEIGHT, height)) std::cout << "camera set height error" << std::endl;
     cv::Mat frame;
     //拾えているか確認
-    std::string cpuDeviceName = core.GetMetric(device, METRIC_KEY(FULL_DEVICE_NAME)).as<std::string>();
-    std::cout << cpuDeviceName << std::endl;
+    //std::string cpuDeviceName = core.GetMetric(device, METRIC_KEY(FULL_DEVICE_NAME)).as<std::string>();
+    //std::cout << cpuDeviceName << std::endl;
     //TODO refactor
     //LoadPlugin(device, plugin);
     
