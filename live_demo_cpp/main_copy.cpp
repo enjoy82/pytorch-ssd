@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
         inputInfo = inputsInfo.begin()->second;
     }
     // ---------------------------------------------
-    /*
+    
     std::cout << "set output info" << std::endl;
     OutputsDataMap outputsInfo(network.getOutputsInfo());
     std::vector<std::string> output_names; //first is concat, second is softmax
@@ -99,8 +99,12 @@ int main(int argc, char *argv[]) {
         output_names.push_back(item.first);
         auto output_data = item.second;
         output_data->setPrecision(Precision::FP32);
-        output_data->setLayout(Layout::CHW);
+        //output_data->setLayout(Layout::CHW);
         const SizeVector outputDims = output_data->getTensorDesc().getDims();
+        for(int i = 0; i < outputDims.size(); i++){
+            std::cout << outputDims[i] << " ";
+        }
+        std::cout << std::endl;
         numDetections.push_back(outputDims[1]);
         objectSizes.push_back(outputDims[2]);
     }
@@ -108,7 +112,7 @@ int main(int argc, char *argv[]) {
         std::cout << output_names[i] << " " << numDetections[i] << " " << objectSizes[i] << std::endl;
     }    //ConfigureOutput(network, output_info, output_name, Precision::FP32, Layout::NC);
     std::cout << "configure output end" << std::endl;
-    */
+    
 
     // -----------------------------------------------------------------------------------------------------
 	std::map<std::string, std::string> config = {};
