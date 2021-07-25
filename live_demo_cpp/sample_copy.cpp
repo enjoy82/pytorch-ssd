@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include <gflags/gflags.h>
 #include <iostream>
 #include <string>
 #include <memory>
@@ -10,18 +9,9 @@
 #include <algorithm>
 #include <map>
 
-#include <format_reader_ptr.h>
 #include <inference_engine.hpp>
 #include <ngraph/ngraph.hpp>
 
-#include <samples/common.hpp>
-#include <samples/slog.hpp>
-#include <samples/args_helper.hpp>
-
-#include <vpu/vpu_tools_common.hpp>
-#include <vpu/vpu_plugin_config.hpp>
-
-#include "object_detection_sample_ssd.h"
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <ie_core.hpp>
