@@ -6,6 +6,7 @@
 #include <algorithm>
 //#include <ext_list.hpp>
 #include <string>
+#include <map>
 
 using namespace InferenceEngine;
 
@@ -191,7 +192,8 @@ int main(){
     //std::map<std::string, std::string> config = {{ PluginConfigParams::KEY_PERF_COUNT, PluginConfigParams::YES }};
     //auto executable_network = core.LoadNetwork(network, device, config);
     //auto executable_network = core.LoadNetwork(network, device);
-    auto executable_network = core.LoadNetwork(network, device, {});
+    std::map<std::string, std::string> config = {};
+    auto executable_network = core.LoadNetwork(network, device, config);
     //LoadModel(network, plugin, executable_network);
     std::cout << "LoadModel end" << std::endl;
 
