@@ -102,6 +102,7 @@ void matU8ToBlob(const cv::Mat& orig_image, InferenceEngine::Blob::Ptr& blob, in
     */
 }
 
+
 //TODO refactor
 int main(){
     InferenceEngine::Core core;
@@ -117,7 +118,7 @@ int main(){
     }else{
         std::cout << "model path error!" << std::endl;
     }
-    std::cout << ie.GetVersions(device) << std::endl;
+    std::cout << core.GetVersions(device) << std::endl;
     int result = 0;
     //core.SetConfig({{ CONFIG_KEY(LOG_LEVEL), CONFIG_VALUE(LOG_WARNING) }}, device);
     /*
@@ -189,7 +190,8 @@ int main(){
     //TODO 変更
     //std::map<std::string, std::string> config = {{ PluginConfigParams::KEY_PERF_COUNT, PluginConfigParams::YES }};
     //auto executable_network = core.LoadNetwork(network, device, config);
-    auto executable_network = core.LoadNetwork(network, device);
+    //auto executable_network = core.LoadNetwork(network, device);
+    auto executable_network = core.LoadNetwork(network, device, {});
     //LoadModel(network, plugin, executable_network);
     std::cout << "LoadModel end" << std::endl;
 
