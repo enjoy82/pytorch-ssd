@@ -156,6 +156,9 @@ int main(){
     double input_height = 300.0;
     float threshold = 0.5;
     cv::VideoCapture cap(0);
+    if(checkFileExistence(modelPath) && checkFileExistence(binPath){
+        std::cout << "model path exist" << std::endl;
+    }
     if(!cap.isOpened()){ //エラー処理
 		 std::cout << "cap error" << std::endl;
 		 return -1;
