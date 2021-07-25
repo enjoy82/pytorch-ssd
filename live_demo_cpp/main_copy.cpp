@@ -95,22 +95,27 @@ int main(int argc, char *argv[]) {
     std::vector<std::string> output_names; //first is concat, second is softmax
     std::vector<int> numDetections;
     std::vector<int> objectSizes;
-    for (auto &item : outputsInfo) {
-        output_names.push_back(item.first);
-        auto output_data = item.second;
-        output_data->setPrecision(Precision::FP32);
-        //output_data->setLayout(Layout::CHW);
-        const SizeVector outputDims = output_data->getTensorDesc().getDims();
-        for(int i = 0; i < outputDims.size(); i++){
-            std::cout << outputDims[i] << " ";
+    if (auto ngraphFunction = network.getFunction()) {
+        for (const auto& out : outputsInfo) {
+            for (const auto & op : ngraphFunction->get_ops()) {
+                if (op->get_type_info() == ngraph::op::DetectionOutput::type_info &&
+                        op->get_friendly_name() == out.second->getName()) {
+                    output_names.push_back(out.first);
+                    auto output_data = out.second;
+                    const SizeVector outputDims = output_data->getTensorDesc().getDims();
+                    numDetections.push_back(outputDims[1]);
+                    objectSizes.push_back(outputDims[2]);
+                    break;
+                }
+            }
         }
-        std::cout << std::endl;
-        numDetections.push_back(outputDims[1]);
-        objectSizes.push_back(outputDims[2]);
+    } else {
+        outputInfo = outputsInfo.begin()->second;
+        outputName = outputInfo->getName();
     }
     for(int i = 0; i < output_names.size(); i++){
         std::cout << output_names[i] << " " << numDetections[i] << " " << objectSizes[i] << std::endl;
-    }    //ConfigureOutput(network, output_info, output_name, Precision::FP32, Layout::NC);
+    }
     std::cout << "configure output end" << std::endl;
     
 
