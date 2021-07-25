@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include <gflags/gflags.h>
 #include <iostream>
 #include <string>
 #include <memory>
@@ -10,7 +9,6 @@
 #include <algorithm>
 #include <map>
 
-#include <format_reader_ptr.h>
 #include <inference_engine.hpp>
 #include <ngraph/ngraph.hpp>
 
@@ -42,12 +40,12 @@ int main(int argc, char *argv[]) {
 
     // --------------------------- 5. Prepare input blobs --------------------------------------------------
     std::cout << "Preparing input blobs" << std::endl;
-
+    
     /** Taking information about all topology inputs **/
-    InputsDataMap inputsInfo(network.getInputsInfo());
+    //InputsDataMap inputsInfo(network.getInputsInfo());
 
     /** SSD network has one input and one output **/
-    if (inputsInfo.size() != 1 && inputsInfo.size() != 2) throw std::logic_error("Sample supports topologies only with 1 or 2 inputs");
+    //if (inputsInfo.size() != 1 && inputsInfo.size() != 2) throw std::logic_error("Sample supports topologies only with 1 or 2 inputs");
 
     /**
      * Some networks have SSD-like output format (ending with DetectionOutput layer), but
@@ -56,39 +54,20 @@ int main(int argc, char *argv[]) {
      * Although object_datection_sample_ssd's main task is to support clean SSD, it could score
      * the networks with two inputs as well. For such networks imInfoInputName will contain the "second" input name.
      */
-    std::string imageInputName, imInfoInputName;
+    std::string input_name;
 
-    InputInfo::Ptr inputInfo = nullptr;
+    InferenceEngine::InputsDataMap input_info(network.getInputsInfo());
+    InferenceEngine::OutputsDataMap output_info(network.getOutputsInfo());
+    //ConfigureInput(network, input_info, input_name, Precision::U8, Layout::NCHW);
+    std::cout << "configure input end" << std::endl;
 
-    SizeVector inputImageDims;
-    /** Stores input image **/
-
-    /** Iterating over all input blobs **/
-    for (auto & item : inputsInfo) {
-        /** Working with first input tensor that stores image **/
-        if (item.second->getInputData()->getTensorDesc().getDims().size() == 4) {
-            imageInputName = item.first;
-
-            inputInfo = item.second;
-
-            std::cout << "Batch size is " << std::to_string(network.getBatchSize()) << std::endl;
-
-            /** Creating first input blob **/
-            Precision inputPrecision = Precision::U8;
-            item.second->setPrecision(inputPrecision);
-        } else if (item.second->getInputData()->getTensorDesc().getDims().size() == 2) {
-            imInfoInputName = item.first;
-
-            Precision inputPrecision = Precision::FP32;
-            item.second->setPrecision(inputPrecision);
-            if ((item.second->getTensorDesc().getDims()[1] != 3 && item.second->getTensorDesc().getDims()[1] != 6)) {
-                throw std::logic_error("Invalid input info. Should be 3 or 6 values length");
-            }
-        }
-    }
-
-    if (inputInfo == nullptr) {
-        inputInfo = inputsInfo.begin()->second;
+    for (auto &item : input_info) {
+        input_name = item.first;
+        auto input_data = item.second;
+        input_data->setPrecision(Precision::U8);
+        input_data->setLayout(Layout::NCHW);
+        input_data->getPreProcess().setResizeAlgorithm(RESIZE_BILINEAR);
+        input_data->getPreProcess().setColorFormat(ColorFormat::RGB);
     }
     std::map<std::string, std::string> config = {};
     // -----------------------------------------------------------------------------------------------------
