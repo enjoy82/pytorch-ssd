@@ -73,8 +73,8 @@ int main(int argc, char *argv[]) {
             /** Creating first input blob **/
             Precision inputPrecision = Precision::U8;
             item.second->setPrecision(inputPrecision);
-            item.second->setLayout(Layout::NCHW);
         } else if (item.second->getInputData()->getTensorDesc().getDims().size() == 2) {
+            std::cout << "FP32" << std::endl;
             imInfoInputName = item.first;
 
             Precision inputPrecision = Precision::FP32;
