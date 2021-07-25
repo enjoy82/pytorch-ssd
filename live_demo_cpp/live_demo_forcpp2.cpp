@@ -334,7 +334,7 @@ int main(){
     
     //ReadModel(modelPath, network_reader);
     //InferenceEngine::CNNNetwork network = network_reader.getNetwork();
-    auto network = core.ReadNetwork(modelPath, binPath)
+    auto network = core.ReadNetwork(modelPath, binPath);
     std::cout << typeid(network).name() << std::endl;
     InferenceEngine::InputsDataMap input_info(network.getInputsInfo());
     InferenceEngine::OutputsDataMap output_info(network.getOutputsInfo());
