@@ -117,6 +117,7 @@ int main(){
     }else{
         std::cout << "model path error!" << std::endl;
     }
+    std::cout << ie.GetVersions(device) << std::endl;
     int result = 0;
     //core.SetConfig({{ CONFIG_KEY(LOG_LEVEL), CONFIG_VALUE(LOG_WARNING) }}, device);
     /*
@@ -154,7 +155,7 @@ int main(){
     
     //ReadModel(modelPath, network_reader);
     //InferenceEngine::CNNNetwork network = network_reader.getNetwork();
-    CNNNetwork network = core.ReadNetwork(modelPath, binPath);
+    CNNNetwork network = core.ReadNetwork(modelPath);
     std::cout << typeid(network).name() << std::endl;
     InferenceEngine::InputsDataMap input_info(network.getInputsInfo());
     InferenceEngine::OutputsDataMap output_info(network.getOutputsInfo());
