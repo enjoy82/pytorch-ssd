@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
 
     /** Taking information about all topology inputs **/
     InputsDataMap inputsInfo(network.getInputsInfo());
-
+    
     /** SSD network has one input and one output **/
     if (inputsInfo.size() != 1 && inputsInfo.size() != 2) throw std::logic_error("Sample supports topologies only with 1 or 2 inputs");
 
@@ -73,6 +73,7 @@ int main(int argc, char *argv[]) {
             /** Creating first input blob **/
             Precision inputPrecision = Precision::U8;
             item.second->setPrecision(inputPrecision);
+            item.second->setPrecision(Layout::NCHW);
         } else if (item.second->getInputData()->getTensorDesc().getDims().size() == 2) {
             imInfoInputName = item.first;
 
@@ -87,9 +88,30 @@ int main(int argc, char *argv[]) {
     if (inputInfo == nullptr) {
         inputInfo = inputsInfo.begin()->second;
     }
-    std::map<std::string, std::string> config = {};
+    // ---------------------------------------------
+    std::cout << "set output info" << std::endl;
+    OutputsDataMap outputsInfo(network.getOutputsInfo());
+    std::vector<std::string> output_names; //first is concat, second is softmax
+    std::vector<int> numDetections;
+    std::vector<int> objectSizes;
+    for (auto &item : outputsInfo) {
+        output_names.push_back(item.first);
+        auto output_data = item.second;
+        output_data->setPrecision(Precision::FP32);
+        output_data->setLayout(Layout::CHW);
+        const SizeVector outputDims = output_data->getTensorDesc().getDims();
+        numDetections.push_back(outputDims[1]);
+        objectSizes.push_back(outputDims[2]);
+    }
+    for(int i = 0; i < output_names.size(); i++){
+        std::cout << output_names[i] << " " << numDetections[i] << " " << objectSizes[i] << std::endl;
+    }    //ConfigureOutput(network, output_info, output_name, Precision::FP32, Layout::NC);
+    std::cout << "configure output end" << std::endl;
+
+
     // -----------------------------------------------------------------------------------------------------
-	ExecutableNetwork executable_network = ie.LoadNetwork(network, device, config);
+	std::map<std::string, std::string> config = {};
+    ExecutableNetwork executable_network = ie.LoadNetwork(network, device, config);
     std::cout << "loadnetwork OK" << std::endl;
     std::cout << "prepare OK" << std::endl;
     return 0;
