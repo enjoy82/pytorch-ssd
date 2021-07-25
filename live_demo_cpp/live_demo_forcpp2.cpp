@@ -1,8 +1,9 @@
 //from https://qiita.com/fan2tamo/items/36bc8f9657d1a430aa54#8-process-output
 #include <iostream>
-#include <inference_engine.hpp>
+#include <ie_executable_network.hpp>
+#include <ie_cnn_network.h>
 #include <opencv2/opencv.hpp>
-#include <ie_iextension.h>
+#include <ie_core.hpp>
 #include<fstream>
 #include <algorithm>
 //#include <ext_list.hpp>
@@ -15,29 +16,6 @@ bool checkFileExistence(const std::string& str)
     std::ifstream ifs(str);
     return ifs.is_open();
 }
-
-bool LoadPlugin(const std::string& device, InferencePlugin& plugin)
-{
-    bool ret = true;
-
-    try
-    {
-        plugin = PluginDispatcher().getPluginByDevice(device);
-        if (device == "CPU")
-        {
-            //plugin.AddExtension(std::make_shared<Extensions::Cpu::CpuExtensions>());
-        }
-    }
-    catch (const std::exception & ex)
-    {
-        //OutputDebugStringA(ex.what());
-        std::cout << "LoadPlugin error" << std::endl;
-        ret = false;
-    }
-
-    return ret;
-}
-
 
 InferenceEngine::Blob::Ptr wrapMat2Blob(const cv::Mat &mat) {
     size_t channels = mat.channels();
@@ -136,8 +114,13 @@ int main(){
     //std::string device = "CPU";
     std::string modelPath = "/home/pi/pytorch-ssd/live_demo_cpp/models/mbv3-ssd-cornv1.xml";
     std::string binPath = "/home/pi/pytorch-ssd/live_demo_cpp/models/mbv3-ssd-cornv1.bin";
+    if(checkFileExistence(modelPath) && checkFileExistence(binPath)){
+        std::cout << "model path exist" << std::endl;
+    }else{
+        std::cout << "model path error!" << std::endl;
+    }
     int result = 0;
-    core.SetConfig({{ CONFIG_KEY(LOG_LEVEL), CONFIG_VALUE(LOG_WARNING) }}, device);
+    //core.SetConfig({{ CONFIG_KEY(LOG_LEVEL), CONFIG_VALUE(LOG_WARNING) }}, device);
     /*
     //CPU推論するときはrelu使えるようにする必要がある
     InferenceEngine::IExtensionPtr inPlaceExtension;
@@ -156,11 +139,7 @@ int main(){
     double input_height = 300.0;
     float threshold = 0.5;
     cv::VideoCapture cap(0);
-    if(checkFileExistence(modelPath) && checkFileExistence(binPath)){
-        std::cout << "model path exist" << std::endl;
-    }else{
-        std::cout << "model path error!" << std::endl;
-    }
+    
     if(!cap.isOpened()){ //エラー処理
 		 std::cout << "cap error" << std::endl;
 		 return -1;
