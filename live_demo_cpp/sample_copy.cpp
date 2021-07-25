@@ -23,6 +23,30 @@
 
 using namespace InferenceEngine;
 
+bool checkFileExistence(const std::string& str)
+{
+    std::ifstream ifs(str);
+    return ifs.is_open();
+}
+
+InferenceEngine::Blob::Ptr wrapMat2Blob(const cv::Mat &mat) {
+    size_t channels = mat.channels();
+    size_t height = mat.size().height;
+    size_t width = mat.size().width;
+    size_t strideH = mat.step.buf[0];
+    size_t strideW = mat.step.buf[1];
+
+    bool is_dense =
+            strideW == channels &&
+            strideH == channels * width;
+
+    InferenceEngine::TensorDesc tDesc(InferenceEngine::Precision::U8,
+                                      {1, channels, height, width},
+                                      InferenceEngine::Layout::NHWC);
+
+    return InferenceEngine::make_shared_blob<uint8_t>(tDesc, mat.data);
+}
+
 
 /**
 * \brief The entry point for the Inference Engine object_detection sample application
@@ -31,19 +55,32 @@ using namespace InferenceEngine;
 */
 int main(int argc, char *argv[]) {
     try {
-        //CNNNetReader network_reader;
         std::string input_name;
-        //std::string device = "GPU";
         std::string device = "MYRIAD";
-        //std::string device = "CPU";
         std::string modelPath = "/home/pi/pytorch-ssd/live_demo_cpp/models/mbv3-ssd-cornv1.xml";
         std::string binPath = "/home/pi/pytorch-ssd/live_demo_cpp/models/mbv3-ssd-cornv1.bin";
+        /*
+        int camera_id = 0;
+        double fps = 30.0;
+        double width = 320.0;
+        double height = 240.0;
+        double input_width = 300.0;
+        double input_height = 300.0;
+        float threshold = 0.5;
+        if(!cap.isOpened()){ //エラー処理
+            std::cout << "cap error" << std::endl;
+            return -1;
+        }
+        if (!cap.set(cv::CAP_PROP_FPS, fps)) std::cout << "camera set fps error" << std::endl;
+        if (!cap.set(cv::CAP_PROP_FRAME_WIDTH, width)) std::cout << "camera set width error" << std::endl;
+        if (!cap.set(cv::CAP_PROP_FRAME_HEIGHT, height)) std::cout << "camera set height error" << std::endl;
+        cv::Mat frame;
+        */
         if(checkFileExistence(modelPath) && checkFileExistence(binPath)){
             std::cout << "model path exist" << std::endl;
         }else{
             std::cout << "model path error!" << std::endl;
         }
-        std::cout << core.GetVersions(device) << std::endl;
         int result = 0;
         Core ie;
 
@@ -55,52 +92,37 @@ int main(int argc, char *argv[]) {
         slog::info << "Preparing input blobs" << slog::endl;
 
         /** Taking information about all topology inputs **/
-        InputsDataMap inputsInfo(network.getInputsInfo());
+        InferenceEngine::InputsDataMap input_info(network.getInputsInfo());
+        InferenceEngine::OutputsDataMap output_info(network.getOutputsInfo());
 
-        /** SSD network has one input and one output **/
-        if (inputsInfo.size() != 1 && inputsInfo.size() != 2) throw std::logic_error("Sample supports topologies only with 1 or 2 inputs");
+            std::cout << "configure input end" << std::endl;
 
-        /**
-         * Some networks have SSD-like output format (ending with DetectionOutput layer), but
-         * having 2 inputs as Faster-RCNN: one for image and one for "image info".
-         *
-         * Although object_datection_sample_ssd's main task is to support clean SSD, it could score
-         * the networks with two inputs as well. For such networks imInfoInputName will contain the "second" input name.
-         */
-        std::string imageInputName, imInfoInputName;
-
-        InputInfo::Ptr inputInfo = nullptr;
-
-        SizeVector inputImageDims;
-        /** Stores input image **/
-
-        /** Iterating over all input blobs **/
-        for (auto & item : inputsInfo) {
-            /** Working with first input tensor that stores image **/
-            if (item.second->getInputData()->getTensorDesc().getDims().size() == 4) {
-                imageInputName = item.first;
-
-                inputInfo = item.second;
-
-                slog::info << "Batch size is " << std::to_string(network.getBatchSize()) << slog::endl;
-
-                /** Creating first input blob **/
-                Precision inputPrecision = Precision::U8;
-                item.second->setPrecision(inputPrecision);
-            } else if (item.second->getInputData()->getTensorDesc().getDims().size() == 2) {
-                imInfoInputName = item.first;
-
-                Precision inputPrecision = Precision::FP32;
-                item.second->setPrecision(inputPrecision);
-                if ((item.second->getTensorDesc().getDims()[1] != 3 && item.second->getTensorDesc().getDims()[1] != 6)) {
-                    throw std::logic_error("Invalid input info. Should be 3 or 6 values length");
-                }
-            }
+        for (auto &item : input_info) {
+            input_name = item.first;
+            auto input_data = item.second;
+            input_data->setPrecision(Precision::U8);
+            input_data->setLayout(Layout::NCHW);
+            input_data->getPreProcess().setResizeAlgorithm(RESIZE_BILINEAR);
+            input_data->getPreProcess().setColorFormat(ColorFormat::RGB);
         }
-
-        if (inputInfo == nullptr) {
-            inputInfo = inputsInfo.begin()->second;
+        std::vector<std::string> output_names; //first is concat, second is softmax
+        std::vector<int> numDetections;
+        std::vector<int> objectSizes;
+        for (auto &item : output_info) {
+            output_names.push_back(item.first);
+            auto output_data = item.second;
+            output_data->setPrecision(Precision::FP32);
+            output_data->setLayout(Layout::CHW);
+            const SizeVector outputDims = output_data->getTensorDesc().getDims();
+            numDetections.push_back(outputDims[1]);
+            objectSizes.push_back(outputDims[2]);
         }
+        for(int i = 0; i < output_names.size(); i++){
+            std::cout << output_names[i] << " " << numDetections[i] << " " << objectSizes[i] << std::endl;
+        }    //ConfigureOutput(network, output_info, output_name, Precision::FP32, Layout::NC);
+        std::cout << "configure output end" << std::endl;
+
+
         // -----------------------------------------------------------------------------------------------------
 	    std::map<std::string, std::string> config = {};
         ExecutableNetwork executable_network = ie.LoadNetwork(network, FLAGS_d, config);
