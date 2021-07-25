@@ -109,10 +109,8 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
-    } else {
-        outputInfo = outputsInfo.begin()->second;
-        outputName = outputInfo->getName();
-    }
+    } 
+    
     for(int i = 0; i < output_names.size(); i++){
         std::cout << output_names[i] << " " << numDetections[i] << " " << objectSizes[i] << std::endl;
     }
