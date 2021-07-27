@@ -41,10 +41,11 @@ int main(int argc, char *argv[]) {
     std::cout << "Preparing input blobs" << std::endl;
 
     /** Taking information about all topology inputs **/
-    InputsDataMap inputsInfo(network.getInputsInfo());
-    
+    InputInfo::Ptr input_info = network.getInputsInfo().begin()->second;
+    std::string input_name = network.getInputsInfo().begin()->first;
+    input_info->setLayout(Layout::NHWC);
+    input_info->setPrecision(Precision::U8);
     /** SSD network has one input and one output **/
-    if (inputsInfo.size() != 1 && inputsInfo.size() != 2) throw std::logic_error("Sample supports topologies only with 1 or 2 inputs");
 
     /**
      * Some networks have SSD-like output format (ending with DetectionOutput layer), but
@@ -53,43 +54,14 @@ int main(int argc, char *argv[]) {
      * Although object_datection_sample_ssd's main task is to support clean SSD, it could score
      * the networks with two inputs as well. For such networks imInfoInputName will contain the "second" input name.
      */
-    std::string imageInputName, imInfoInputName;
+    DataPtr output_info1 = network.getOutputsInfo().begin()->second;
+    std::string output_name1 = network.getOutputsInfo().begin()->first;
 
-    InputInfo::Ptr inputInfo = nullptr;
-
-    SizeVector inputImageDims;
-    /** Stores input image **/
-
-    /** Iterating over all input blobs **/
-    for (auto & item : inputsInfo) {
-        /** Working with first input tensor that stores image **/
-        if (item.second->getInputData()->getTensorDesc().getDims().size() == 4) {
-            imageInputName = item.first;
-
-            inputInfo = item.second;
-
-            std::cout << "Batch size is " << std::to_string(network.getBatchSize()) << std::endl;
-
-            /** Creating first input blob **/
-            Precision inputPrecision = Precision::U8;
-            item.second->setPrecision(inputPrecision);
-        } else if (item.second->getInputData()->getTensorDesc().getDims().size() == 2) {
-            std::cout << "FP32" << std::endl;
-            imInfoInputName = item.first;
-
-            Precision inputPrecision = Precision::FP32;
-            item.second->setPrecision(inputPrecision);
-            if ((item.second->getTensorDesc().getDims()[1] != 3 && item.second->getTensorDesc().getDims()[1] != 6)) {
-                throw std::logic_error("Invalid input info. Should be 3 or 6 values length");
-            }
-        }
-    }
-
-    if (inputInfo == nullptr) {
-        inputInfo = inputsInfo.begin()->second;
-    }
+    DataPtr output_info2 = network.getOutputsInfo().end()->second;
+    std::string output_name2 = network.getOutputsInfo().end()->first;
+    std::cout << output_name1 << " " << output_name << std::endl;
     // ---------------------------------------------
-    
+    /*
     std::cout << "set output info" << std::endl;
     OutputsDataMap outputsInfo(network.getOutputsInfo());
     std::vector<std::string> output_names; //first is concat, second is softmax
@@ -110,10 +82,10 @@ int main(int argc, char *argv[]) {
             }
         }
     } 
-    
     for(int i = 0; i < output_names.size(); i++){
         std::cout << output_names[i] << " " << numDetections[i] << " " << objectSizes[i] << std::endl;
     }
+    */
     std::cout << "configure output end" << std::endl;
     
 
