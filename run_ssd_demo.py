@@ -30,62 +30,43 @@ predictor = create_mobilenetv3_small_ssd_lite_predictor(exec_net, image_size = i
 
 print("stand", input_blob_name, output_blob_name)
 # カメラ準備 
-cap = cv2.VideoCapture(0)
-
-if cap.isOpened() != True:
-    print("camera open error!")
-    quit()
-else:
-    print("camera open!")
 
 
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, windowwidth)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, windowheight)
+frame = cv2.imread("/home/pi/samples/build/hikage_010_can.JPG")
+# Reload on error 
 
-# メインループ 
-while True:
-    ret, frame = cap.read()
-    # Reload on error 
-    if ret == False:
-        print("error")
+#frame = cv2.imread("./gun.jpg")
+boxes, labels, probs = predictor.predict(frame,10, 0.4) #TODO 閾値
+# 出力から必要なデータのみ取り出し 
+#TODO label怪しい
+print(boxes, labels, probs)
+
+frame = cv2.resize(frame, (300, 300))
+
+boxed = [] #重複box
+for i in range(len(boxes)):
+    box = boxes[i, :]
+    box = list(map(int, box))
+    flag = 1
+    for b in boxed:#重複チェック
+        if np.all(box == b):
+            flag = 0
+    if flag == 0:
         continue
-    #frame = cv2.imread("./gun.jpg")
-    boxes, labels, probs = predictor.predict(frame,10, 0.4) #TODO 閾値
-    # 出力から必要なデータのみ取り出し 
-    #TODO label怪しい
-    print(boxes, labels, probs)
-    
-    frame = cv2.resize(frame, (300, 300))
+    boxed.append(box)
 
-    boxed = [] #重複box
-    for i in range(len(boxes)):
-        box = boxes[i, :]
-        box = list(map(int, box))
-        flag = 1
-        for b in boxed:#重複チェック
-            if np.all(box == b):
-                flag = 0
-        if flag == 0:
-            continue
-        boxed.append(box)
+    label = class_names[labels[i]] + str(probs[i])
+    cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 4)
+    cv2.putText(frame, label,
+                (int(box[0]) + 20, int(box[1]) + 40),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,  # font scale
+                (255, 0, 255),
+                2)  # line type
 
-        label = class_names[labels[i]] + str(probs[i])
-        cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 4)
-        cv2.putText(frame, label,
-                    (int(box[0]) + 20, int(box[1]) + 40),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,  # font scale
-                    (255, 0, 255),
-                    2)  # line type
-    
-    # 画像表示 
-    cv2.imshow('frame', frame)
-    # 何らかのキーが押されたら終了 
-    key = cv2.waitKey(1)
-    #cv2.imwrite("./test.png", frame)
-    break
-    if key != -1:
-        break
+# 画像表示 
+cv2.imshow('frame', frame)
+cv2.imwrite("/home/pi/samples/build/result.jpg", frame)
     
 # 終了処理 
 #cap.release()
