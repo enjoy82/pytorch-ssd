@@ -22,6 +22,14 @@ struct ObjectDetectionResult
 */
 class ObjectDetector
 {
+private:
+    InferenceEngine::Core core;
+    InferenceEngine::CNNNetwork network;
+    InferenceEngine::ExecutableNetwork executableNetwork;
+    InferenceEngine::InferRequest inferRequest;
+    std::string inputName;
+    //今回構築したモデルが2つoutputを返すのでvector
+    std::vector<std::string> outputName;
 public:
     explicit ObjectDetector();
 

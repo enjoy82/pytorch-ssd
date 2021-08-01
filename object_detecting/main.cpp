@@ -31,11 +31,12 @@ int main(){
             int ymax = std::min(300, static_cast<int>(pickedBox[i][l][3]));
             
             //if(xmin > 300 || ymin > 300 || xmax < 0 || ymax < 0)
-            std::cout << xmin << " " << ymin << " " << xmax << " " << ymax << std::endl;
+            std::cout << l << std::endl;
+            std::cout << xmin << " " << ymin << " " << xmax << " " << ymax << " " << pickedBox[i][l][4] << std::endl;
             
             cv::rectangle(image, cv::Point(xmin,ymin), cv::Point(xmax,ymax), cv::Scalar(255,0,0), 2);
 
         }
     }
-    cv::imwrite("./result.png", image);
+    cv::imwrite("/home/pi/pytorch-ssd/object_detecting/result.png", image);
 }

@@ -1,5 +1,4 @@
 //参考元 https://qiita.com/fan2tamo/items/18f418bd6d23686621ea
-
 #include <iostream>
 #include <string>
 #include <memory>
@@ -12,13 +11,7 @@
 #include "object_detecting.hpp"
 
 
-InferenceEngine::Core core;
-InferenceEngine::CNNNetwork network;
-InferenceEngine::ExecutableNetwork executableNetwork;
-InferenceEngine::InferRequest inferRequest;
-std::string inputName;
-//今回構築したモデルが2つoutputを返すのでvector
-std::vector<std::string> outputName;
+
 
 namespace
 {
@@ -39,14 +32,27 @@ namespace
     std::vector<std::vector<float> > hardNms(std::vector<std::vector<float> > &boxScores, int candidate_size=200)
     {
         //各ラベルでのバウンディングボックスの被りを消す
-        std::vector<std::vector<float> > res = boxScores;
-        return res;
-        /*
-        std::vector<std::vector<float> >　picked;
-        //降順ソート
-        std::sort(boxScores.begin(), boxScores.end(), [](auto &x, auto &y){x[4] > y[4];});
-        while()
+        //本当はNMSのアルゴリズムを組む必要があるが、今回の使用用途ではこれで事足りる
+        std::vector<std::vector<float> > picked;
+        //スコア降順ソート
+        /* 
+        //なぜかエラー出る、help!
+        std::sort(boxScores.begin(), boxScores.end(), [](std::vector<float> &x, std::vector<float> &y){
+            x[4] > y[4];
+        });
         */
+        float maxScore = 0.0;
+        std::vector<float> candidateBox;
+        for(int i = 0; i < boxScores.size(); i++)
+        {
+            if(maxScore < boxScores[i][4])
+            {
+                maxScore = boxScores[i][4];
+                candidateBox = boxScores[i];
+            }
+        }
+        picked.push_back(candidateBox);
+        return picked;
     }
 
 }
@@ -148,7 +154,6 @@ bool ObjectDetector::setOutputInfos()
             outputInfo->setPrecision(InferenceEngine::Precision::FP32);
             outputInfo->setLayout(InferenceEngine::Layout::CHW);
             //outputInfos.push_back(outputInfo);
-            std::cout << std::endl;
         }
     }
     catch(...)
