@@ -1,6 +1,6 @@
 #include <opencv2/opencv.hpp>
+#include <opencv2/videoio.hpp>
 #include <iostream>
-#include <opencv2/opencv.hpp>
 #include "object_detecting.hpp"
 
 int main(){
@@ -17,7 +17,7 @@ int main(){
 		 std::cout << "cap error" << std::endl;
 		 return -1;
 	}
-    if (!cap.set(cv::CAP_PROP_FPS, fps)) std::cout << "camera set fps error" << std::endl;
+    cap.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M','J','P','G'));
     if (!cap.set(cv::CAP_PROP_FRAME_WIDTH, width)) std::cout << "camera set width error" << std::endl;
     if (!cap.set(cv::CAP_PROP_FRAME_HEIGHT, height)) std::cout << "camera set height error" << std::endl;
     cv::Mat frame;
