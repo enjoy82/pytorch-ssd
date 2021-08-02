@@ -11,6 +11,7 @@ int main(){
     int camera_id = 0;
     int width = 320;
     int height = 240;
+    int fps = 20;
     cv::VideoCapture cap(camera_id);
     if(!cap.isOpened()){ //エラー処理
 		 std::cout << "cap error" << std::endl;
