@@ -7,7 +7,17 @@ import cv2
 import numpy as np
 import types
 from numpy import random
+from PIL import Image
+import albumentations as albu
 
+class ISONoise(object):
+    def __init__(self, color_shift = (0.1, 0.2), intensity = (0.1, 0.2), p = 0.3):
+        self.color_shift = color_shift
+        self.intensity = intensity
+        self.p = p
+    def __call__(self, image, boxes=None, labels=None):
+        image = albu.augmentations.transforms.ISONoise(color_shift = self.color_shift, intensity = self.intensity, p = self.p)(image=image)['image']
+        return image, boxes, labels
 
 def intersect(box_a, box_b):
     max_xy = np.minimum(box_a[:, 2:], box_b[2:])
@@ -327,7 +337,7 @@ class Expand(object):
             return image, boxes, labels
 
         height, width, depth = image.shape
-        ratio = random.uniform(1, 4)
+        ratio = random.uniform(1, 2)
         left = random.uniform(0, width*ratio - width)
         top = random.uniform(0, height*ratio - height)
 
@@ -398,10 +408,38 @@ class PhotometricDistort(object):
     def __call__(self, image, boxes, labels):
         im = image.copy()
         im, boxes, labels = self.rand_brightness(im, boxes, labels)
+        """
         if random.randint(2):
             distort = Compose(self.pd[:-1])
         else:
             distort = Compose(self.pd[1:])
         im, boxes, labels = distort(im, boxes, labels)
+        """
         return self.rand_light_noise(im, boxes, labels)
 
+class DisplayObject(object):
+    def __call__(self, image, boxes, labels):
+        outimg = image.astype(np.uint8).copy()
+        boxes[:, 0] *= 300
+        boxes[:, 1] *= 300
+        boxes[:, 2] *= 300
+        boxes[:, 3] *= 300
+        for i, box in enumerate(boxes):
+            print(box)
+            cv2.rectangle(outimg, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (0, 0, 0),  thickness=8)
+            cv2.putText(outimg, str(labels[i]),
+                        (int(box[0]) + 20, int(box[1]) + 40),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        1,  # font scale
+                        (255, 0, 255),
+                        2)  # line type
+        display(Image.fromarray(outimg))
+        return image, boxes, labels
+
+class randomColorChange(object):
+    def __call__(self, image, boxes, labels):
+        if np.random.rand() < 0.5:
+            image = albu.augmentations.transforms.RGBShift(p = 1.0)(image=image)['image']
+        if np.random.rand() < 0.2:
+            image = albu.augmentations.transforms.RandomFog(p = 1.0)(image=image)['image']
+        return image, boxes, labels

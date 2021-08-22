@@ -97,13 +97,13 @@ def compute_average_precision_per_class(num_true_cases, gt_boxes, difficult_case
         return measurements.compute_average_precision(precision, recall)
 
 #設定
-dataset_path = "./images"
-trained_model = "./models/mbv3-v3-Epoch-60-Loss-5.104689827371151.pth" #モデルパス
+dataset_path = "./all_images"
+trained_model = "./models/gaku_cornv6/mbv3-Epoch-120-Loss- 3.055887301762899.pth" #モデルパス
 nms_method = "hard"
 iou_threshold = 0.5 #"The threshold of Intersection over Union."
 use_2007_metric = True
 eval_dir = "eval_results" #The directory to store evaluation results
-label_file = "./models/open-images-model-labels.txt" #The label file path
+label_file = "./models/gaku_cornv6/open-images-model-labels.txt" #The label file path
 
 
 if __name__ == '__main__':
@@ -111,7 +111,6 @@ if __name__ == '__main__':
     eval_path.mkdir(exist_ok=True)
     timer = Timer()
     class_names = [name.strip() for name in open(label_file).readlines()]
-
     dataset = OpenImagesDataset(dataset_path, dataset_type="test")
 
     true_case_stat, all_gb_boxes, all_difficult_cases = group_annotation_by_class(dataset)
@@ -124,13 +123,15 @@ if __name__ == '__main__':
     predictor = create_mobilenetv2_ssd_lite_predictor(net, nms_method=nms_method, device=DEVICE)
 
     results = []
-    for i in range(len(dataset))[:1]:
+    for i in range(len(dataset)):
         print("process image", i)
         timer.start("Load Image")
         image = dataset.get_image(i)
         print("Load Image: {:4f} seconds.".format(timer.end("Load Image")))
         timer.start("Predict")
         boxes, labels, probs = predictor.predict(image, 10, 0.2) #閾値いれるべきでは？
+        if(len(boxes) == 0):
+            continue
         print("Prediction: {:4f} seconds.".format(timer.end("Predict")))
         indexes = torch.ones(labels.size(0), 1, dtype=torch.float32) * i
         indexes = indexes.to(DEVICE)
@@ -143,6 +144,7 @@ if __name__ == '__main__':
             probs.reshape(-1, 1),
             boxes + 1.0  # matlab's indexes start from 1
         ], dim=1))
+    print(results)
     results = torch.cat(results)
     
     for class_index, class_name in enumerate(class_names):

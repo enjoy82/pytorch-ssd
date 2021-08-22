@@ -26,6 +26,7 @@ class OpenImagesDataset:
     def _getitem(self, index):
         image_info = self.data[index]
         image = self._read_image(image_info['image_id'])
+        image = cv2.resize(image, (300,300)) #ハードコーディングやばい
         # duplicate boxes to prevent corruption of dataset
         boxes = copy.copy(image_info['boxes'])
         boxes[:, 0] *= image.shape[1]
@@ -34,8 +35,10 @@ class OpenImagesDataset:
         boxes[:, 3] *= image.shape[0]
         # duplicate labels to prevent corruption of dataset
         labels = copy.copy(image_info['labels'])
+        
         if self.transform:
             image, boxes, labels = self.transform(image, boxes, labels)
+        #print("real!", boxes, labels)
         if self.target_transform:
             boxes, labels = self.target_transform(boxes, labels)
         return image_info['image_id'], image, boxes, labels
@@ -60,6 +63,8 @@ class OpenImagesDataset:
     def _read_data(self):
         annotation_file = f"{self.root}/sub-{self.dataset_type}-annotations-bbox.csv"
         annotations = pd.read_csv(annotation_file)
+        annotations = annotations.dropna(how='any')
+        print(list(annotations['ClassName'].unique()))
         class_names = ['BACKGROUND'] + sorted(list(annotations['ClassName'].unique()))
         class_dict = {class_name: i for i, class_name in enumerate(class_names)}
         data = []

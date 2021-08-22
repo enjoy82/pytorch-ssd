@@ -8,10 +8,10 @@ import numpy as np
 openImageRow = ["ImageID","LabelName","Confidence","XMin","XMax","YMin","YMax","ClassName"]
 
 #jsonファイル指定
-jsonFiles = [""]
+jsonFiles = ["./via_project_17Aug2021_19h53m_json.json"]
 
 #画像ある場所
-allImagesPath = "./all_images"
+allImagesPath = "./can_real"
 
 #準備
 test_csv = open(os.path.join(allImagesPath, "sub-test-annotations-bbox.csv"), "w")
