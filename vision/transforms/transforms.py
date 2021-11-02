@@ -443,3 +443,9 @@ class randomColorChange(object):
         if np.random.rand() < 0.2:
             image = albu.augmentations.transforms.RandomFog(p = 1.0)(image=image)['image']
         return image, boxes, labels
+    
+class randomBrightnessContrast(object):
+    def __call__(self, image, boxes, labels):
+        if np.random.rand() < 0.4:
+            image = albu.augmentations.transforms.RandomBrightnessContrast(p = 1.0)(image=image)['image']
+        return image, boxes, labels

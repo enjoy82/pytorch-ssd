@@ -18,10 +18,10 @@ output_onnx
 __pycache__/
 *.py[cod]
 *$py.class
-
+*csv
 # Jupyter Notebook
 .ipynb_checkpoints
-
+*ipynb
 # pyenv
 .python-version
 images
