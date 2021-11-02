@@ -108,7 +108,7 @@ class cleanAugmentation:
         return self.augment(img, boxes, labels)
 
 class orgAugmentation:
-    def __init__(self, size, mean=0, std=1.0):
+    def __init__(self, size, background_imgs, mean=0, std=1.0):
         """
         Args:
             size: the size the of final image.
@@ -117,12 +117,14 @@ class orgAugmentation:
         self.mean = mean
         self.size = size
         self.augment = Compose([
-            #randomColorChange(), #color shift入れる
+            randomColorChange(), #color shift入れる
+            randomBrightnessContrast(),
+            Shrink(background_imgs),
             #ISONoise(),
             #PhotometricDistort(),
             ConvertFromInts(),
             #PhotometricDistort(),
-            #Expand(self.mean),
+            Expand(self.mean),
             RandomSampleCrop(),
             RandomMirror(),
             ToPercentCoords(),

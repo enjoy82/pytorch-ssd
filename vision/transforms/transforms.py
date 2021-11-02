@@ -417,6 +417,27 @@ class PhotometricDistort(object):
         """
         return self.rand_light_noise(im, boxes, labels)
 
+class Shrink(object): #backgroundから画像を生成する
+    def __init__(self, background_imgs):
+        self.background_imgs = background_imgs
+    def __call__(self, image, boxes, labels):
+        if np.random.rand() < 0.2:
+            background_img = cv2.imread(np.random.choice(self.background_imgs))
+            h, w = image.shape[:2]
+            image_size = h * (1+np.random.rand()*2)
+            background_img = cv2.resize(background_img, (image_size, image_size))
+            bh, bw = background_img.shape[:2]
+            sh = int((bh - h) * np.random.rand())
+            sw = int((bw - w) * np.random.rand())
+            background_img[sh:sh+h, sw:sw+w] = image
+            image = background_img
+            boxes[:, 0] += sw
+            boxes[:, 1] += sh
+            boxes[:, 2] += sw
+            boxes[:, 3] += sh
+            return image, boxes, labels
+        return image, boxes, labels
+
 class DisplayObject(object):
     def __call__(self, image, boxes, labels):
         outimg = image.astype(np.uint8).copy()
@@ -433,7 +454,7 @@ class DisplayObject(object):
                         1,  # font scale
                         (255, 0, 255),
                         2)  # line type
-        display(Image.fromarray(outimg))
+        #display(Image.fromarray(outimg))
         return image, boxes, labels
 
 class randomColorChange(object):
@@ -446,6 +467,6 @@ class randomColorChange(object):
     
 class randomBrightnessContrast(object):
     def __call__(self, image, boxes, labels):
-        if np.random.rand() < 0.4:
+        if np.random.rand() < 0.2:
             image = albu.augmentations.transforms.RandomBrightnessContrast(p = 1.0)(image=image)['image']
         return image, boxes, labels
